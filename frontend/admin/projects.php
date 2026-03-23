@@ -19,11 +19,12 @@
         $mid = (int) ($_POST['manager_id'] ?? 0);
         $clr = $_POST['color'] ?? '#6366F1';
         $github = trim($_POST['github_url'] ?? '');
+        $github_pat = trim($_POST['github_pat'] ?? '');
 
         if ($name && $code) {
             try {
-                $db->prepare('INSERT INTO tf_projects(name,code,description,manager_id,color,github_url,created_by,org_id) VALUES(?,?,?,?,?,?,?,?)')
-                    ->execute([$name, $code, $desc, $mid ?: null, $clr, $github ?: null, currentUser()['id'], currentUser()['org_id']]);
+                $db->prepare('INSERT INTO tf_projects(name,code,description,manager_id,color,github_url,github_pat,created_by,org_id) VALUES(?,?,?,?,?,?,?,?,?)')
+                    ->execute([$name, $code, $desc, $mid ?: null, $clr, $github ?: null, $github_pat ?: null, currentUser()['id'], currentUser()['org_id']]);
                 $pid = $db->lastInsertId();
                 logActivity(currentUser()['id'], $pid, null, 'created project', 'project', $pid);
                 $orgUsers = $db->prepare("SELECT id FROM tf_users WHERE org_id=?");
@@ -157,6 +158,8 @@
                         <div class="tf-fg"><label class="tf-lbl">GitHub Repository (Optional)</label><input type="url" name="github_url"
                                 class="tf-inp" placeholder="https://github.com/org/repo"></div>
                     </div>
+                    <div class="tf-fg" style="margin-top: 16px;"><label class="tf-lbl">GitHub PAT Token (Optional, fallback to .env)</label><input type="password" name="github_pat"
+                            class="tf-inp" placeholder="ghp_xxx..."></div>
                 </div>
                 <div class="tf-modal-foot"><button type="button" class="btn btn-secondary"
                         onclick="document.getElementById('addModal').classList.remove('open')">Cancel</button><button
