@@ -18,6 +18,7 @@ $__nav = [
         ['icon' => '⚡', 'label' => 'Dashboard', 'page' => 'dashboard', 'url' => URL_ADMIN],
         ['icon' => '👥', 'label' => 'Users', 'page' => 'users', 'url' => APP_URL . '/frontend/admin/users.php'],
         ['icon' => '📁', 'label' => 'Projects', 'page' => 'projects', 'url' => APP_URL . '/frontend/admin/projects.php'],
+        ['icon' => '🐙', 'label' => 'Git Activity', 'page' => 'git_activity', 'url' => APP_URL . '/frontend/admin/git_activity.php'],
         ['icon' => '📊', 'label' => 'Analytics', 'page' => 'analytics', 'url' => APP_URL . '/frontend/admin/analytics.php'],
         ['icon' => '📜', 'label' => 'Activity', 'page' => 'activity', 'url' => APP_URL . '/frontend/admin/activity.php'],
         ['icon' => '🔔', 'label' => 'Notifications', 'page' => 'notifs', 'url' => APP_URL . '/frontend/admin/notifications.php'],
@@ -26,6 +27,7 @@ $__nav = [
     'manager' => [
         ['icon' => '⚡', 'label' => 'Dashboard', 'page' => 'dashboard', 'url' => URL_MANAGER],
         ['icon' => '📁', 'label' => 'Projects', 'page' => 'projects', 'url' => APP_URL . '/frontend/manager/projects.php'],
+        ['icon' => '🐙', 'label' => 'Git Activity', 'page' => 'git_activity', 'url' => APP_URL . '/frontend/manager/git_activity.php'],
         ['icon' => '🔥', 'label' => 'Sprints', 'page' => 'sprints', 'url' => APP_URL . '/frontend/manager/sprints.php'],
         ['icon' => '📋', 'label' => 'Tasks', 'page' => 'tasks', 'url' => APP_URL . '/frontend/manager/tasks.php'],
         ['icon' => '🗂️', 'label' => 'Kanban', 'page' => 'kanban', 'url' => APP_URL . '/frontend/manager/kanban.php'],
@@ -70,16 +72,7 @@ $__theme = getUserTheme();
         <?php endforeach; ?>
     </nav>
 
-    <div id="tf-notif-wrapper">
-        <div id="tf-notif-btn">
-            <div>🔔 <span style="margin-left:6px;">Updates</span></div>
-            <div id="tf-notif-badge">0</div>
-        </div>
-        <div id="tf-notif-dropdown">
-            <div class="tf-nd-head">Recent Activity</div>
-            <div id="tf-notif-list"></div>
-        </div>
-    </div>
+
 
     <div class="tf-sb-foot">
         <div class="tf-sb-theme">

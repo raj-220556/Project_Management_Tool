@@ -73,7 +73,7 @@ $colMeta = [
         </div>
         <div class="tf-kcol-list">
           <?php foreach($cols[$status] as $t): ?>
-          <div class="tf-task-card" data-id="<?= $t['id'] ?>" draggable="true">
+          <div class="tf-task-card" data-id="<?= $t['id'] ?>" draggable="true" ondblclick="window.location.href='task_detail.php?id=<?= $t['id'] ?>'" title="Double-click to view details">
             <div class="tf-task-type-dot t-<?= $t['type'] ?>"></div>
             <div class="tf-task-title"><?= e($t['title']) ?></div>
             <div class="tf-task-foot">

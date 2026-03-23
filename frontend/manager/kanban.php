@@ -62,7 +62,7 @@ $teamMembers = $team->fetchAll();
         </div>
         <div class="tf-kcol-list">
           <?php foreach($cols[$status] as $t): ?>
-          <div class="tf-task-card" data-id="<?= $t['id'] ?>" draggable="true">
+          <div class="tf-task-card" data-id="<?= $t['id'] ?>" draggable="true" ondblclick="window.location.href='task_detail.php?id=<?= $t['id'] ?>'" title="Double-click to view details">
             <div class="tf-task-type-dot t-<?= $t['type'] ?>"></div>
             <div class="tf-task-title"><?= e($t['title']) ?></div>
             <div style="font-size:11px;color:var(--text3);margin-bottom:6px"><?= e($t['aname']??'Unassigned') ?></div>

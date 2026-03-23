@@ -77,7 +77,7 @@
                             </thead>
                             <tbody>
                                 <?php foreach ($tasks as $t): ?>
-                                    <tr>
+                                    <tr onclick="window.location.href='task_detail.php?id=<?= $t['id'] ?>'" style="cursor:pointer;">
                                         <td>
                                             <div style="display:flex;align-items:center;gap:8px">
                                                 <span class="tf-task-type-dot t-<?= $t['type'] ?>"

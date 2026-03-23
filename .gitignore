@@ -1,3 +1,4 @@
 .env
 vendor/
 venv/
+!.env.example
