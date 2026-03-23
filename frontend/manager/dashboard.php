@@ -28,6 +28,7 @@
   $team = $teamWorkload->fetchAll();
   
   getGitHubActivity(); // Sync commits
+  $orgId = currentUser()['org_id'] ?? 0;
   $recentAct = $db->prepare("SELECT a.*, u.name uname FROM tf_activity a LEFT JOIN tf_users u ON a.user_id=u.id LEFT JOIN tf_projects p ON a.project_id=p.id WHERE (p.manager_id=? OR u.org_id=? OR p.org_id=?) ORDER BY a.created_at DESC LIMIT 8");
   $recentAct->execute([$uid, $orgId, $orgId]);
   $recentAct = $recentAct->fetchAll();

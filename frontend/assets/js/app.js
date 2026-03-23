@@ -9,7 +9,12 @@ const Theme = {
     current: () => document.documentElement.getAttribute('data-theme') || 'light',
     apply(t) {
         document.documentElement.setAttribute('data-theme', t);
+        if (document.body) document.body.setAttribute('data-theme', t);
         localStorage.setItem('sd_theme', t);
+        
+        const lbl = document.querySelector('.tf-sb-theme-lbl');
+        if (lbl) lbl.innerHTML = (t === 'dark' ? '🌙 Dark' : '☀️ Light') + ' Mode';
+
         fetch(APP_BASE + '/backend/api/set_theme.php', {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ theme: t })
@@ -18,12 +23,16 @@ const Theme = {
     toggle() { this.apply(this.current() === 'dark' ? 'light' : 'dark'); },
     init() {
         const saved = localStorage.getItem('sd_theme');
-        if (saved) document.documentElement.setAttribute('data-theme', saved);
+        if (saved) this.apply(saved);
+        
         document.querySelectorAll('.tf-theme-tog, .tf-theme-tog-btn').forEach(b =>
-            b.addEventListener('click', () => Theme.toggle())
+            b.addEventListener('click', (e) => {
+                e.preventDefault();
+                this.toggle();
+            })
         );
     }
-};
+}
 
 /* ── PAGE TRANSITIONS ────────────────────────────────────────────── */
 const Curtain = {

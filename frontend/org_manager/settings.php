@@ -17,6 +17,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     $email = trim($_POST['email'] ?? '');
     if ($name && $email) {
         $db->prepare("UPDATE tf_users SET name = ?, email = ? WHERE id = ?")->execute([$name, $email, currentUser()['id']]);
+        currentUser(true); // refresh cache
         $msg = "Profile updated successfully.";
     }
 }
@@ -72,15 +73,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                                 <input type="hidden" name="action" value="update_profile">
                                 <div class="tf-fg">
                                     <label class="tf-lbl">Full Name</label>
-                                    <input type="text" name="name" class="tf-inp" value="<?= e(currentUser()['name']) ?>" style="background:rgba(255,255,255,0.02)" required>
+                                    <input type="text" name="name" class="tf-inp" value="<?= e(currentUser()['name']) ?>" required>
                                 </div>
                                 <div class="tf-fg">
                                     <label class="tf-lbl">Email</label>
-                                    <input type="email" name="email" class="tf-inp" value="<?= e(currentUser()['email']) ?>" style="background:rgba(255,255,255,0.02)" required>
+                                    <input type="email" name="email" class="tf-inp" value="<?= e(currentUser()['email']) ?>" required>
                                 </div>
                                 <div class="tf-fg">
                                     <label class="tf-lbl">Role</label>
-                                    <input type="text" class="tf-inp" value="<?= ucfirst(currentUser()['role']) ?>" readonly style="background:rgba(255,255,255,0.02); opacity:0.7; cursor:not-allowed;">
+                                    <input type="text" class="tf-inp" value="<?= ucfirst(currentUser()['role']) ?>" readonly style="opacity:0.7; cursor:not-allowed;">
                                 </div>
                                 <button type="submit" class="btn btn-primary" style="margin-top:14px; padding: 10px 24px; border-radius: 8px;">
                                     🔒 Save Changes
@@ -93,8 +94,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                             <div class="set-title">Security Settings</div>
                             <p style="color:var(--text3); font-size:14px; margin-bottom:20px;">Update your password and secure your account.</p>
                             <form method="POST" action="?tab=security" onsubmit="event.preventDefault(); alert('Password updated! (Demo)');">
-                                <div class="tf-fg"><label class="tf-lbl">Current Password</label><input type="password" class="tf-inp" style="background:rgba(255,255,255,0.02)" required></div>
-                                <div class="tf-fg"><label class="tf-lbl">New Password</label><input type="password" class="tf-inp" style="background:rgba(255,255,255,0.02)" required></div>
+                                <div class="tf-fg"><label class="tf-lbl">Current Password</label><input type="password" class="tf-inp" required></div>
+                                <div class="tf-fg"><label class="tf-lbl">New Password</label><input type="password" class="tf-inp" required></div>
                                 <button class="btn btn-primary" style="margin-top:14px;">Update Password</button>
                             </form>
                         </div>
@@ -103,7 +104,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                         <div id="panel-appearance" class="set-panel <?= $activeTab === 'appearance' ? 'active' : '' ?>">
                             <div class="set-title">Appearance</div>
                             <p style="color:var(--text3); font-size:14px; margin-bottom:24px;">Customize the look and feel of SprintDesk.</p>
-                            <div style="display:flex; align-items:center; justify-content:space-between; background:rgba(255,255,255,0.02); padding:24px; border-radius:12px; border:1px solid rgba(255,255,255,0.05);">
+                            <div style="display:flex;flex-direction:column;gap:12px;background:var(--surface2);padding:20px;border-radius:12px; border:1px solid var(--border);">
                                 <div>
                                     <div style="font-weight:600; font-size: 15px; color: var(--text); margin-bottom:4px;">Application Theme</div>
                                     <div style="font-size:13px; color:var(--text3);">Toggle the interface theme across your current session.</div>

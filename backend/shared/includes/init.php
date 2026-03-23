@@ -100,11 +100,12 @@ function isLoggedIn(): bool
     return !empty($_SESSION['sd_uid']);
 }
 
-function currentUser(): ?array
+function currentUser(bool $refresh = false): ?array
 {
+    static $u = null;
+    if ($refresh) $u = null;
     if (!isLoggedIn())
         return null;
-    static $u = null;
     if ($u === null) {
         $s = db()->prepare('SELECT u.*, o.name org_name FROM tf_users u LEFT JOIN tf_organizations o ON u.org_id = o.id WHERE u.id = ? AND u.is_active = 1');
         $s->execute([$_SESSION['sd_uid']]);
