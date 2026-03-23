@@ -8,44 +8,71 @@ require_once __DIR__ . '/../../backend/shared/includes/init.php';
 requireLogin('admin');
 $activePage = 'users';
 
-// Handle add manager
+// Handle add user
 if ($_SERVER['REQUEST_METHOD']==='POST' && ($_POST['action']??'')==='add') {
     $name  = trim($_POST['name']??'');
     $email = trim($_POST['email']??'');
     $pass  = $_POST['password']??'';
     $orgKeyInp = trim($_POST['org_key']??'');
-    $role  = 'manager'; // STRICT HIERARCHY: Admins can only create managers
+    $role  = $_POST['role'] ?? 'manager'; // Allow both manager and developer
     
-    // Fetch live org key
-    $okQ = db()->prepare("SELECT org_key FROM tf_organizations WHERE id=?");
-    $okQ->execute([currentUser()['org_id']]);
-    $realKey = $okQ->fetchColumn();
+    if (!in_array($role, ['manager', 'developer'])) {
+        $role = 'manager';
+    }
 
-    if ($name && $email && $pass && $orgKeyInp) {
-        if (!$realKey) {
-            $addErr = 'Organization Key not configured! Please configure it in Settings first.';
-        } elseif ($orgKeyInp !== $realKey) {
-            $addErr = 'Invalid Organization Key. You are not authorized to provision users.';
+    $db = db();
+    $orgId = currentUser()['org_id'];
+    
+    // Fetch Org Domain & Key
+    $orgQ = $db->prepare("SELECT domain, org_key FROM tf_organizations WHERE id=?");
+    $orgQ->execute([$orgId]);
+    $orgData = $orgQ->fetch();
+    $orgDomain = $orgData['domain'] ?? '';
+    $realKey = $orgData['org_key'] ?? '';
+
+    // Validate email domain
+    if ($email) {
+        $emailDomain = substr(strrchr($email, "@"), 1);
+        
+        if ($orgDomain) {
+            if (strtolower($emailDomain) !== strtolower($orgDomain)) {
+                $addErr = 'Email must belong to the organisation domain: ' . $orgDomain;
+            }
         } else {
-            try {
-                db()->prepare('INSERT INTO tf_users(name,email,password,role,org_id) VALUES(?,?,?,?,?)')->execute([
-                    $name,
-                    $email,
-                    password_hash($pass, PASSWORD_DEFAULT),
-                    $role,
-                    currentUser()['org_id']
-                ]);
-                $newUid = db()->lastInsertId();
-                logActivity(currentUser()['id'], null, null, 'created a new manager', 'user', $newUid, '', $name);
-                notifyUser($newUid, 'Welcome!', 'Your account has been created.', 'dashboard.php');
-                notifyUser(currentUser()['id'], 'User Added', "User '$name' created.", 'users.php');
-                header('Location: users.php?ok=1&celebrate=1');
-                exit;
-            } catch (Exception $e) {
-                $addErr = 'Email already exists.';
+            // Fallback to Admin's email domain
+            $adminDomain = substr(strrchr(currentUser()['email'], "@"), 1);
+            if (strtolower($emailDomain) !== strtolower($adminDomain)) {
+                $addErr = 'Email must belong to your domain: ' . $adminDomain;
             }
         }
-    } else { $addErr = 'Please fill in all fields including the Organization Key.'; }
+    }
+
+    if (empty($addErr)) {
+        if ($name && $email && $pass && $orgKeyInp) {
+            if (!$realKey) {
+                $addErr = 'Organization Key not configured! Please configure it in Settings first.';
+            } elseif ($orgKeyInp !== $realKey) {
+                $addErr = 'Invalid Organization Key. You are not authorized to provision users.';
+            } else {
+                try {
+                    $db->prepare('INSERT INTO tf_users(name,email,password,role,org_id) VALUES(?,?,?,?,?)')->execute([
+                        $name,
+                        $email,
+                        password_hash($pass, PASSWORD_DEFAULT),
+                        $role,
+                        $orgId
+                    ]);
+                    $newUid = $db->lastInsertId();
+                    logActivity(currentUser()['id'], null, null, 'created a new ' . $role, 'user', $newUid, '', $name);
+                    notifyUser($newUid, 'Welcome!', 'Your account has been created.', 'dashboard.php');
+                    header('Location: users.php?ok=1&celebrate=1');
+                    exit;
+                } catch (Exception $e) {
+                    $addErr = 'Email already exists.';
+                }
+            }
+        } else { $addErr = 'Please fill in all fields including the Organization Key.'; }
+    }
 }
 // Handle toggle active
 if (isset($_GET['toggle'])) {
@@ -143,11 +170,13 @@ $users = $users->fetchAll();
         <div class="tf-fg"><label class="tf-lbl">Password</label><input type="password" name="password" class="tf-inp" required placeholder="min 8 characters"></div>
         <div class="tf-fg"><label class="tf-lbl" style="color:var(--brand)">Organization Key</label><input type="text" name="org_key" class="tf-inp" required placeholder="Required Security Passcode"></div>
         <div class="tf-fg"><label class="tf-lbl">Role</label>
-          <input type="text" class="tf-inp" value="Manager" disabled style="opacity:0.7; cursor:not-allowed;">
-          <input type="hidden" name="role" value="manager">
+          <select name="role" class="tf-inp" style="background:var(--surface);">
+            <option value="manager">Manager</option>
+            <option value="developer">Developer</option>
+          </select>
         </div>
       </div>
-      <div class="tf-modal-foot"><button type="button" class="btn btn-secondary" onclick="document.getElementById('addModal').classList.remove('open')">Cancel</button><button type="submit" class="btn btn-primary">Create Manager</button></div>
+      <div class="tf-modal-foot"><button type="button" class="btn btn-secondary" onclick="document.getElementById('addModal').classList.remove('open')">Cancel</button><button type="submit" class="btn btn-primary">Create User</button></div>
     </form>
   </div>
 </div>

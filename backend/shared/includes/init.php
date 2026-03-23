@@ -23,6 +23,7 @@ define('DB_CHARSET', 'utf8mb4');
 define('URL_ASSETS', APP_URL . '/frontend/assets');
 define('URL_LANDING', APP_URL . '/frontend/landing/index.php');
 define('URL_LOGIN', APP_URL . '/frontend/auth/login.php');
+define('URL_REGISTER', APP_URL . '/frontend/auth/register.php');
 define('URL_LOGOUT', APP_URL . '/backend/auth/logout.php');
 define('URL_ADMIN', APP_URL . '/frontend/admin/dashboard.php');
 define('URL_MANAGER', APP_URL . '/frontend/manager/dashboard.php');

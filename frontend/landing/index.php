@@ -1882,7 +1882,7 @@ if (isLoggedIn())
     <div class="nav-end">
       <button class="theme-btn" id="themeBtn">🌙</button>
       <a href="<?= URL_LOGIN ?>" class="btn btn-ghost">Log in</a>
-      <a href="<?= URL_LOGIN ?>" class="btn btn-solid">Get Started →</a>
+      <a href="<?= URL_REGISTER ?>" class="btn btn-solid">Get Started →</a>
     </div>
   </nav>
 
