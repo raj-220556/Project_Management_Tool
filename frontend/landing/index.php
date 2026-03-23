@@ -77,7 +77,9 @@ if (isLoggedIn())
       line-height: 1.6;
       transition: background .35s, color .35s;
       font-weight: 500;
-      -webkit-font-smoothing: antialiased
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      text-rendering: optimizeLegibility;
     }
 
     h1,
@@ -220,22 +222,27 @@ if (isLoggedIn())
       position: fixed;
       top: 0;
       inset-inline: 0;
-      z-index: 500;
-      padding: 16px 56px;
+      z-index: 1000;
+      padding: 0 56px;
+      height: 90px;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      transition: all .3s
+      transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
+      border-bottom: 1px solid transparent;
     }
 
     nav.stuck {
-      background: rgba(248, 247, 255, .94);
-      backdrop-filter: blur(18px);
-      box-shadow: 0 1px 0 var(--border)
+      height: 72px;
+      background: rgba(248, 247, 255, .8);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+      box-shadow: 0 4px 30px rgba(0,0,0,0.03);
     }
 
     [data-theme=dark] nav.stuck {
-      background: rgba(11, 10, 30, .94)
+      background: rgba(11, 10, 30, .85)
     }
 
     .logo {
@@ -271,15 +278,26 @@ if (isLoggedIn())
     }
 
     .nav-mid a {
-      font-size: 14px;
+      font-size: 14.5px;
       font-weight: 500;
-      color: var(--text3);
-      transition: color .2s
+      color: var(--text2);
+      transition: all .25s;
+      position: relative;
+      opacity: 0.85;
     }
 
-    .nav-mid a:hover {
-      color: var(--text)
+    .nav-mid a:hover, .nav-mid a.active {
+      color: var(--brand);
+      opacity: 1;
     }
+    
+    .nav-mid a::after {
+        content: ''; position: absolute; bottom: -8px; left: 50%;
+        width: 0; height: 2px; background: var(--brand);
+        transition: all 0.3s cubic-bezier(0.165, 0.84, 0.44, 1);
+        transform: translateX(-50%);
+    }
+    .nav-mid a:hover::after, .nav-mid a.active::after { width: 100%; }
 
     .nav-end {
       display: flex;
@@ -1790,6 +1808,171 @@ if (isLoggedIn())
       transform: none
     }
 
+    /* SLIDESHOW BASE STYLES - RESTORED PREMIUM */
+    .slideshow-ext { margin-top: 40px; }
+    
+    .slide-panels { position: relative; min-height: 480px; overflow: hidden; }
+    .slide-panel { 
+        position: absolute; 
+        inset: 0; 
+        display: grid; 
+        grid-template-columns: 1fr 1fr; 
+        gap: 40px; 
+        align-items: center; 
+        opacity: 0; 
+        pointer-events: none; 
+        transition: opacity 0.5s ease, transform 0.5s ease;
+        transform: translateX(40px);
+    }
+    .slide-panel.active { 
+        opacity: 1; 
+        pointer-events: all; 
+        transform: translateX(0);
+        z-index: 2;
+    }
+    .slide-panel.out { 
+        opacity: 0; 
+        transform: translateX(-40px);
+        z-index: 1;
+    }
+
+    /* PREMIUM REVEAL SYSTEM */
+    [data-r] { opacity: 0; transform: translateY(30px); transition: all 0.8s cubic-bezier(0.2, 0.8, 0.2, 1); }
+    [data-r].revealed { opacity: 1; transform: translateY(0); }
+    
+    /* SLIDESHOW PROGRESS BAR (Main Demo) */
+    .slide-chrome { position: relative; overflow: hidden; }
+    .slide-progress {
+        position: absolute;
+        bottom: 0; left: 0;
+        height: 2px;
+        background: var(--brand);
+        width: 0%;
+        transition: width linear;
+        z-index: 10;
+    }
+
+    /* STICKY REVEAL STYLES */
+    .sticky-wrap { display: flex; gap: 80px; align-items: flex-start; margin-top: 60px; }
+    .sticky-left { flex: 1; }
+    .sticky-right { flex: 1.2; position: sticky; top: 120px; height: 500px; }
+    
+    .feat-item { padding: 120px 0; border-bottom: 1px solid rgba(255,255,255,0.05); transition: opacity 0.5s ease; border-left: 3px solid transparent; padding-left: 30px; }
+    .feat-item:last-child { border-bottom: none; }
+    .feat-item.active { opacity: 1; border-left-color: var(--brand); }
+    .feat-item:not(.active) { opacity: 0.55; filter: blur(0.5px); }
+    
+    .mock-stage { width: 100%; height: 100%; position: relative; border-radius: 20px; overflow: hidden; background: var(--surface2); border: 1px solid var(--border); box-shadow: var(--sh-lg); }
+    .mock-img { position: absolute; inset: 0; opacity: 0; transition: opacity 0.6s ease; display: flex; align-items: center; justify-content: center; padding: 40px; }
+    .mock-img.active { opacity: 1; z-index: 2; }
+
+    /* BENTO GRID STYLES */
+    .bento-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 30px; margin-top: 60px; }
+    .bento-card { 
+        background: var(--surface); 
+        border: 1px solid var(--border); 
+        border-radius: 24px; 
+        padding: 40px; 
+        transition: all 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
+        position: relative;
+        overflow: hidden;
+        cursor: pointer;
+    }
+    .bento-card:hover { 
+        transform: translateY(-10px) scale(1.02); 
+        border-color: var(--brand);
+        box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+    }
+    .bento-card::before {
+        content: ''; position: absolute; inset: 0;
+        background: radial-gradient(circle at var(--x, 50%) var(--y, 50%), rgba(99,102,241,0.15) 0%, transparent 60%);
+        opacity: 0; transition: opacity 0.4s;
+    }
+    .bento-card:hover::before { opacity: 1; }
+    
+    .bento-icon { font-size: 48px; margin-bottom: 24px; display: block; filter: drop-shadow(0 4px 10px rgba(0,0,0,0.2)); }
+    .bento-h { font-size: 26px; font-weight: 800; margin-bottom: 15px; color: var(--text); letter-spacing: -0.02em; }
+    .bento-p { color: var(--text2); line-height: 1.65; font-size: 16px; font-weight: 500; }
+
+    /* TESTIMONIALS MARQUEE */
+    .testi-sec { padding: 120px 0; overflow: hidden; position: relative; }
+    
+    /* EDGE FADING MASK */
+    .marquee-container {
+        position: relative;
+        mask-image: linear-gradient(to right, transparent, black 15%, black 85%, transparent);
+        -webkit-mask-image: linear-gradient(to right, transparent, black 15%, black 85%, transparent);
+    }
+
+    .marquee-wall { display: flex; flex-direction: column; gap: 40px; margin-top: 60px; }
+    .marquee-row { display: flex; gap: 30px; width: max-content; animation: scrollLeft 75s linear infinite; }
+    .marquee-row.reverse { animation: scrollRight 75s linear infinite; }
+    .marquee-row:hover { animation-play-state: paused; }
+    
+    @keyframes scrollLeft { 0% { transform: translateX(0); } 100% { transform: translateX(calc(-50% - 15px)); } }
+    @keyframes scrollRight { 0% { transform: translateX(calc(-50% - 15px)); } 100% { transform: translateX(0); } }
+
+    .testi-card { 
+        width: 400px; 
+        background: var(--surface); 
+        border: 1px solid var(--border); 
+        border-radius: 24px; 
+        padding: 35px; 
+        display: flex; flex-direction: column; gap: 20px;
+        transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
+        position: relative;
+    }
+    .testi-card:hover { 
+        border-color: var(--brand); 
+        transform: translateY(-5px);
+        box-shadow: 0 20px 40px rgba(0,0,0,0.25); 
+    }
+    
+    .testi-user { display: flex; align-items: center; justify-content: space-between; }
+    .testi-user-l { display: flex; align-items: center; gap: 12px; }
+    .testi-ava { width: 48px; height: 48px; border-radius: 50%; background: var(--surface2); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 20px; box-shadow: var(--sh-sm); overflow: hidden; }
+    .testi-ava img { width: 100%; height: 100%; object-fit: cover; }
+    .testi-info h4 { font-family: var(--f-head); font-size: 16px; font-weight: 700; color: var(--text); }
+    .testi-info p { font-size: 13px; color: var(--text3); }
+    
+    .testi-badge { padding: 4px 8px; background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.2); border-radius: 6px; font-size: 10px; font-weight: 700; color: var(--green); text-transform: uppercase; letter-spacing: 0.5px; }
+    
+    .testi-stars { display: flex; gap: 4px; color: #F59E0B; font-size: 14px; }
+    .testi-text { font-size: 15.5px; color: var(--text2); line-height: 1.65; font-weight: 500; font-style: italic; }
+
+    /* TRUST BAR */
+    .trust-bar { margin-top: 80px; text-align: center; border-top: 1px solid var(--border); padding-top: 40px; opacity: 0.7; }
+    .trust-h { font-size: 14px; color: var(--text3); text-transform: uppercase; letter-spacing: 3px; font-weight: 700; }
+
+    @media(max-width:1024px) {
+        .sticky-wrap { flex-direction: column; }
+        .sticky-right { position: relative; top: 0; height: 360px; order: -1; }
+        .feat-item { padding: 60px 0; }
+        .bento-grid { grid-template-columns: 1fr; }
+    }
+
+    .deck-nav {
+        position: absolute;
+        bottom: -100px;
+        left: 0; right: 0;
+        display: flex;
+        justify-content: center;
+        gap: 20px;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.4s;
+    }
+    .deck-container.active .deck-nav {
+        opacity: 1;
+        pointer-events: all;
+    }
+
+    @media(max-width:768px) {
+        .deck-container { height: 400px; padding: 0 20px; }
+        .deck-card { padding: 32px; }
+        .deck-card-icon { font-size: 40px !important; }
+    }
+
     @media(max-width:1024px) {
       .hero-wrap {
         grid-template-columns: 1fr;
@@ -1865,6 +2048,13 @@ if (isLoggedIn())
 </head>
 
 <body>
+  <div id="scroll-progress"></div>
+  <div class="hero-bg-fixed">
+    <div class="hblob hb1" style="width:600px;height:600px;background:radial-gradient(circle, var(--brand) 0%, transparent 70%);opacity:0.1;filter:blur(80px);position:absolute;top:-100px;right:-100px;animation:float 20s infinite alternate;"></div>
+    <div class="hblob hb2" style="width:500px;height:500px;background:radial-gradient(circle, #C084FC 0%, transparent 70%);opacity:0.08;filter:blur(80px);position:absolute;bottom:-200px;left:-100px;animation:float 25s infinite alternate-reverse;"></div>
+  </div>
+  <style>@keyframes float { 0% { transform: translate(0,0) rotate(0deg); } 100% { transform: translate(100px, 50px) rotate(10deg); } }</style>
+
   <div id="sd-curtain"></div>
 
   <!-- NAV -->
@@ -2030,25 +2220,18 @@ if (isLoggedIn())
         <p class="sec-p" style="margin:0 auto">Click any tab to jump to that feature, or use the arrows to walk through
           the full tour step by step.</p>
       </div>
-
       <!-- TAB SELECTOR -->
-      <div class="slide-tabs" id="slideTabs" style="margin-top:28px">
-        <button class="slide-tab active" data-idx="0"><span class="stab-icon">🏠</span><span
-            class="stab-label">Overview</span></button>
-        <button class="slide-tab" data-idx="1"><span class="stab-icon">👑</span><span
-            class="stab-label">Admin</span></button>
-        <button class="slide-tab" data-idx="2"><span class="stab-icon">📊</span><span
-            class="stab-label">Analytics</span></button>
-        <button class="slide-tab" data-idx="3"><span class="stab-icon">🔥</span><span
-            class="stab-label">Sprints</span></button>
-        <button class="slide-tab" data-idx="4"><span class="stab-icon">🗂️</span><span
-            class="stab-label">Kanban</span></button>
-        <button class="slide-tab" data-idx="5"><span class="stab-icon">💻</span><span
-            class="stab-label">Developer</span></button>
+      <div class="slide-tabs" style="margin-top:28px">
+        <button class="slide-tab active" data-idx="0"><span class="stab-icon">🏠</span><span class="stab-label">Overview</span></button>
+        <button class="slide-tab" data-idx="1"><span class="stab-icon">👑</span><span class="stab-label">Admin</span></button>
+        <button class="slide-tab" data-idx="2"><span class="stab-icon">📊</span><span class="stab-label">Analytics</span></button>
+        <button class="slide-tab" data-idx="3"><span class="stab-icon">🔥</span><span class="stab-label">Sprints</span></button>
+        <button class="slide-tab" data-idx="4"><span class="stab-icon">🗂️</span><span class="stab-label">Kanban</span></button>
+        <button class="slide-tab" data-idx="5"><span class="stab-icon">💻</span><span class="stab-label">Developer</span></button>
       </div>
 
       <!-- SLIDESHOW -->
-      <div class="slideshow" data-r data-r-delay=".06s">
+      <div class="slideshow" id="demo" data-r data-r-delay=".06s" style="margin-top:28px;">
         <!-- Chrome bar -->
         <div class="slide-chrome">
           <div class="sc-dots">
@@ -2056,8 +2239,8 @@ if (isLoggedIn())
             <div class="sc-dot" style="background:#F59E0B"></div>
             <div class="sc-dot" style="background:#10B981"></div>
           </div>
-          <div class="sc-url" id="slideUrl">localhost/sprintdesk/frontend/landing/index.php</div>
           <div class="sc-badge" id="slideBadge">1 of 6</div>
+          <div class="slide-progress"></div>
         </div>
 
         <!-- PANELS -->
@@ -2371,54 +2554,6 @@ if (isLoggedIn())
     </div>
   </div>
 
-  <!-- FEATURES -->
-  <section class="section" id="features">
-    <div class="sec-inner">
-      <div data-r>
-        <div class="sec-tag">Features</div>
-        <h2 class="sec-h">Everything your team needs</h2>
-        <p class="sec-p">Built for the full dev lifecycle — from backlog to deployment.</p>
-      </div>
-      <div class="feat-grid">
-        <div class="fcard" data-r data-r-delay=".04s">
-          <div class="fcard-ico fi-v">🗂️</div>
-          <div class="fcard-name">Kanban Board</div>
-          <div class="fcard-desc">Drag and drop tasks across four columns with AJAX saves. Real-time status updates, no
-            page reload.</div>
-        </div>
-        <div class="fcard" data-r data-r-delay=".08s">
-          <div class="fcard-ico fi-r">🔥</div>
-          <div class="fcard-name">Sprint Management</div>
-          <div class="fcard-desc">Create sprints with goals, deadlines and story points. Track velocity and progress
-            with live charts.</div>
-        </div>
-        <div class="fcard" data-r data-r-delay=".12s">
-          <div class="fcard-ico fi-o">👥</div>
-          <div class="fcard-name">Role-Based Access</div>
-          <div class="fcard-desc">Admin, Manager and Developer each get a tailored dashboard. OAuth login via Google and
-            GitHub.</div>
-        </div>
-        <div class="fcard" data-r data-r-delay=".16s">
-          <div class="fcard-ico fi-g">🔗</div>
-          <div class="fcard-name">GitHub Integration</div>
-          <div class="fcard-desc">Link commits and pull requests directly to tasks. Track code changes alongside your
-            tickets.</div>
-        </div>
-        <div class="fcard" data-r data-r-delay=".20s">
-          <div class="fcard-ico fi-b">📊</div>
-          <div class="fcard-name">Analytics & Reports</div>
-          <div class="fcard-desc">Sprint burndown and task breakdown charts powered by Chart.js with live MySQL data.
-          </div>
-        </div>
-        <div class="fcard" data-r data-r-delay=".24s">
-          <div class="fcard-ico fi-t">📜</div>
-          <div class="fcard-name">Activity Log</div>
-          <div class="fcard-desc">Full audit trail of every action across all projects. Real-time notifications for task
-            assignments.</div>
-        </div>
-      </div>
-    </div>
-  </section>
 
   <!-- HOW IT WORKS -->
   <section class="section" id="how" style="background:var(--surface)">
@@ -2452,51 +2587,190 @@ if (isLoggedIn())
     </div>
   </section>
 
-  <!-- ROLES -->
-  <section class="section" id="roles">
-    <div class="sec-inner">
-      <div data-r>
-        <div class="sec-tag">Access Control</div>
-        <h2 class="sec-h">Three roles, one platform</h2>
-        <p class="sec-p">Each role gets its own focused workspace tailored to their responsibilities.</p>
+
+    <section class="section" id="features">
+      <div class="sec-inner">
+        <div style="text-align:center" data-r>
+          <div class="sec-tag">Powerful Features</div>
+          <h2 class="sec-h">Everything your team needs</h2>
+          <p class="sec-p" style="margin: 0 auto; max-width: 600px;">Experience a world-class workspace where productivity meets professional craftsmanship.</p>
+        </div>
+
+        <div class="sticky-wrap">
+          <div class="sticky-left">
+            <div class="feat-item active" data-feat="kanban">
+               <span class="bento-icon">🗂️</span>
+               <h3 class="bento-h">Kanban Boards</h3>
+               <p class="bento-p">A high-performance drag-and-drop board for tracking daily tasks. Real-time updates with no page reloads, ensuring your team stays in sync effortlessly.</p>
+            </div>
+            <div class="feat-item" data-feat="sprints">
+               <span class="bento-icon">🔥</span>
+               <h3 class="bento-h">Sprints & Milestones</h3>
+               <p class="bento-p">Plan your releases with precision. Set sprint goals, track story points, and monitor team velocity through automated burndown analytics.</p>
+            </div>
+            <div class="feat-item" data-feat="roles">
+               <span class="bento-icon">👥</span>
+               <h3 class="bento-h">Role-Based Access</h3>
+               <p class="bento-p">A secure architecture that ensures the right people have the right tools. Admin, Manager, and Developer roles each get a tailored experience.</p>
+            </div>
+            <div class="feat-item" data-feat="github">
+               <span class="bento-icon">🔗</span>
+               <h3 class="bento-h">GitHub Integration</h3>
+               <p class="bento-p">The bridge between your code and your tasks. Link commits and pull requests directly to SprintDesk tickets for complete traceability.</p>
+            </div>
+            <div class="feat-item" data-feat="analytics">
+               <span class="bento-icon">📊</span>
+               <h3 class="bento-h">Live Analytics</h3>
+               <p class="bento-p">Visualize your data with professional-grade charts. Monitor project health and team productivity using real-time MySQL data processed via Chart.js.</p>
+            </div>
+          </div>
+          <div class="sticky-right">
+             <div class="mock-stage">
+                <div class="mock-img active" id="feat-kanban">
+                   <div class="sp-ui"><div class="ui-kcol"><div class="ui-kcol-h" style="color:var(--text)">In Progress</div><div class="ui-card"><div class="ui-card-t">Auth Fix</div><span class="ui-chip uc-o">High</span></div><div class="ui-card"><div class="ui-card-t">API Refactor</div><span class="ui-chip uc-v">Review</span></div></div></div>
+                </div>
+                <div class="mock-img" id="feat-sprints">
+                   <div style="background:rgba(255,255,255,.05);padding:40px;border-radius:12px;width:100%"><div style="font-size:12px;margin-bottom:12px;opacity:0.6">Sprint Velocity</div><div class="ui-prog-fill" style="width:78%;height:20px;background:var(--brand);border-radius:10px;"></div><div style="margin-top:15px;font-size:16px;font-weight:700">78% Complete</div></div>
+                </div>
+                <div class="mock-img" id="feat-roles">
+                   <div style="display:flex;flex-direction:column;gap:12px;width:100%"><span class="ui-chip uc-v" style="font-size:16px;padding:12px 20px;border-radius:12px">👑 Admin Dashboard</span> <span class="ui-chip uc-o" style="font-size:16px;padding:12px 20px;border-radius:12px">🗂️ Manager View</span> <span class="ui-chip uc-b" style="font-size:16px;padding:12px 20px;border-radius:12px">💻 Developer Workspace</span></div>
+                </div>
+                <div class="mock-img" id="feat-github">
+                   <div style="background:#0F172A;padding:40px;border-radius:12px;font-family:var(--fm);color:#CBD5E1;width:100%"><div style="color:#94A3B8;margin-bottom:12px;">// Linked to Task #42</div><span style="color:#818CF8">feat:</span> add oauth support<br><br><span style="color:#94A3B8">2 commits · 1 PR opened</span></div>
+                </div>
+                <div class="mock-img" id="feat-analytics">
+                   <div style="display:flex;align-items:flex-end;gap:10px;height:120px;"><div style="width:25px;height:40%;background:var(--brand);opacity:0.4;border-radius:4px"></div><div style="width:25px;height:70%;background:var(--brand);opacity:0.6;border-radius:4px"></div><div style="width:25px;height:100%;background:var(--brand);border-radius:4px"></div><div style="width:25px;height:60%;background:var(--brand);opacity:0.8;border-radius:4px"></div></div>
+                </div>
+             </div>
+          </div>
+        </div>
       </div>
-      <div class="roles-grid">
-        <div class="rcard rc-admin" data-r data-r-delay=".04s">
-          <div class="rcard-icon">👑</div>
-          <div class="rcard-name">Admin</div>
-          <div class="rcard-desc">Full system control — manages users, projects and platform config.</div>
-          <ul class="rcard-perms">
-            <li>Manage all users & roles</li>
-            <li>Create & archive projects</li>
-            <li>Full activity log</li>
-            <li>System settings</li>
-          </ul>
-        </div>
-        <div class="rcard rc-manager" data-r data-r-delay=".08s">
-          <div class="rcard-icon">🗂️</div>
-          <div class="rcard-name">Manager</div>
-          <div class="rcard-desc">Oversees sprint planning, task assignment and team progress.</div>
-          <ul class="rcard-perms">
-            <li>Create & manage sprints</li>
-            <li>Assign tasks to devs</li>
-            <li>Track team velocity</li>
-            <li>Generate reports</li>
-          </ul>
-        </div>
-        <div class="rcard rc-dev" data-r data-r-delay=".12s">
-          <div class="rcard-icon">💻</div>
-          <div class="rcard-name">Developer</div>
-          <div class="rcard-desc">Focused view of personal tasks, kanban and GitHub linking.</div>
-          <ul class="rcard-perms">
-            <li>Update own tasks on kanban</li>
-            <li>Link GitHub commits & PRs</li>
-            <li>Add comments to tasks</li>
-            <li>View sprint progress</li>
-          </ul>
+    </section>
+    
+    <!-- TESTIMONIALS -->
+    <section class="testi-sec" id="feedback">
+      <div class="sec-inner" style="text-align:center" data-r>
+        <div class="sec-tag">Social Proof</div>
+        <h2 class="sec-h">Trusted by 2,000+ Teams</h2>
+        <p class="sec-p" style="margin: 0 auto">See why project managers and developers worldwide rely on SprintDesk to ship faster.</p>
+      </div>
+
+      <div class="marquee-container">
+        <div class="marquee-wall">
+          <!-- Row 1 -->
+          <div class="marquee-row">
+             <?php for($i=0; $i<2; $i++): ?>
+             <div class="testi-card">
+                <div class="testi-user">
+                   <div class="testi-user-l">
+                      <div class="testi-ava"><img src="../assets/img/avatars/alex.png" alt="Alex"></div>
+                      <div class="testi-info"><h4>Alex Rivera</h4><p>Senior Developer</p></div>
+                   </div>
+                   <div class="testi-badge">✓ Verified</div>
+                </div>
+                <div class="testi-stars">★★★★★</div>
+                <p class="testi-text">"The best Kanban board I've ever used. The GitHub integration is a game-changer for our dev flow—we ship features 30% faster now."</p>
+             </div>
+             <div class="testi-card">
+                <div class="testi-user">
+                   <div class="testi-user-l">
+                      <div class="testi-ava"><img src="../assets/img/avatars/sarah.png" alt="Sarah"></div>
+                      <div class="testi-info"><h4>Sarah Chen</h4><p>Product Manager</p></div>
+                   </div>
+                   <div class="testi-badge">✓ Verified</div>
+                </div>
+                <div class="testi-stars">★★★★★</div>
+                <p class="testi-text">"SprintDesk cut our planning meetings in half. The team velocity tracking and burndown charts are incredibly accurate."</p>
+             </div>
+             <div class="testi-card">
+                <div class="testi-user">
+                   <div class="testi-user-l">
+                      <div class="testi-ava"><img src="../assets/img/avatars/marcus.png" alt="Marcus"></div>
+                      <div class="testi-info"><h4>Marcus Holm</h4><p>CTO @ NordicCode</p></div>
+                   </div>
+                   <div class="testi-badge">✓ Verified</div>
+                </div>
+                <div class="testi-stars">★★★★★</div>
+                <p class="testi-text">"Clean, fast, and powerful. It handles our multi-tenant organization flawlessly. Highly recommend for any agile team."</p>
+             </div>
+             <?php endfor; ?>
+          </div>
+
+          <!-- Row 2 -->
+          <div class="marquee-row reverse">
+             <?php for($i=0; $i<2; $i++): ?>
+             <div class="testi-card">
+                <div class="testi-user">
+                   <div class="testi-user-l">
+                      <div class="testi-ava"><img src="../assets/img/avatars/elena.png" alt="Elena"></div>
+                      <div class="testi-info"><h4>Elena Rossi</h4><p>Design Lead</p></div>
+                   </div>
+                   <div class="testi-badge">✓ Verified</div>
+                </div>
+                <div class="testi-stars">★★★★★</div>
+                <p class="testi-text">"Transitioning from Jira was seamless. The UI is much more intuitive and allows me to focus on design instead of status updates."</p>
+             </div>
+             <div class="testi-card">
+                <div class="testi-user">
+                   <div class="testi-user-l">
+                      <div class="testi-ava"><img src="../assets/img/avatars/james.png" alt="James"></div>
+                      <div class="testi-info"><h4>James Watts</h4><p>Engineering Manager</p></div>
+                   </div>
+                   <div class="testi-badge">✓ Verified</div>
+                </div>
+                <div class="testi-stars">★★★★★</div>
+                <p class="testi-text">"The role-based dashboards are perfect. Developers see code, managers see progress. It's the clarity we were missing."</p>
+             </div>
+             <div class="testi-card">
+                <div class="testi-user">
+                   <div class="testi-user-l">
+                      <div class="testi-ava"><img src="../assets/img/avatars/david.png" alt="David"></div>
+                      <div class="testi-info"><h4>David Miller</h4><p>Operations Lead</p></div>
+                   </div>
+                   <div class="testi-badge">✓ Verified</div>
+                </div>
+                <div class="testi-stars">★★★★★</div>
+                <p class="testi-text">"Smooth animations and the dark mode support make it a joy to use. It's the first PM tool that my team actually enjoys opening."</p>
+             </div>
+             <?php endfor; ?>
+          </div>
         </div>
       </div>
-    </div>
-  </section>
+
+      <!-- Trust Bar -->
+      <div class="trust-bar" data-r>
+         <h4 class="trust-h">Accelerating high-performance teams worldwide</h4>
+      </div>
+    </section>
+
+    <!-- ROLES BENTO GRID -->
+    <section class="section" id="roles" style="background:var(--surface2)">
+      <div class="sec-inner">
+        <div style="text-align:center" data-r>
+          <div class="sec-tag">Access Levels</div>
+          <h2 class="sec-h">Three roles, one platform</h2>
+          <p class="sec-p" style="margin: 0 auto; max-width: 600px;">Focused workspaces designed for high-performance teams.</p>
+        </div>
+
+        <div class="bento-grid">
+          <div class="bento-card" data-r>
+             <span class="bento-icon">👑</span>
+             <h3 class="bento-h">Administrator</h3>
+             <p class="bento-p">Full system authority. Manage multi-tenant organizations, configure system-wide security, and oversee all platform activity.</p>
+          </div>
+          <div class="bento-card" data-r data-r-delay=".1s">
+             <span class="bento-icon">🗂️</span>
+             <h3 class="bento-h">Project Manager</h3>
+             <p class="bento-p">The agile orchestrator. Create sprints, assign tasks, track team performance, and keep projects shipping on schedule.</p>
+          </div>
+          <div class="bento-card" data-r data-r-delay=".2s">
+             <span class="bento-icon">💻</span>
+             <h3 class="bento-h">Developer</h3>
+             <p class="bento-p">Focused execution. A zero-distraction workspace for managing personal tasks, updating kanban boards, and linking GitHub commits.</p>
+          </div>
+        </div>
+      </div>
+    </section>
 
   <!-- CTA -->
   <!-- SYSTEM ARCHITECTURE -->
@@ -2545,31 +2819,31 @@ if (isLoggedIn())
       </div>
     </div>
   </section>
-  <div class="cta-section">
-    <div class="cta-glow"></div>
-    <div class="cta-inner" data-r>
-      <h2 class="cta-h">Ready to ship faster?</h2>
-      <p class="cta-p">Sign in to your SprintDesk workspace and start managing projects like a pro team.</p>
-      <div class="cta-btns">
-        <a href="<?= URL_LOGIN ?>" class="btn-white">🚀 Open Dashboard</a>
-        <a href="<?= URL_LOGIN ?>" class="btn btn-outline-white">Login with Google →</a>
+  
+  <footer style="padding: 60px 56px; border-top: 1px solid var(--border); background: var(--surface); text-align: center;">
+      <div style="max-width: 1100px; margin: 0 auto;">
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 24px;">
+              <div class="logo" style="opacity: 0.8;">
+                  <div class="logo-mark" style="width: 26px; height: 26px; font-size: 14px;">🚀</div>
+                  SprintDesk
+              </div>
+              <div style="font-size: 13.5px; color: var(--text3);">
+                  © <?= date('Y') ?> SprintDesk Inc. · All rights reserved.
+              </div>
+              <div style="display: flex; gap: 24px; font-size: 14px; font-weight: 500;">
+                  <a href="#features" style="color: var(--text2); text-decoration: none;">Features</a>
+                  <a href="#demo" style="color: var(--text2); text-decoration: none;">Demo</a>
+                  <a href="<?= URL_LOGIN ?>" style="color: var(--text2); text-decoration: none;">Login</a>
+              </div>
+          </div>
+          <div style="margin-top: 40px; padding-top: 24px; border-top: 1px solid var(--border); display: flex; justify-content: center; gap: 32px; font-size: 12px; color: var(--text3);">
+              <a href="#" style="color: inherit; text-decoration: none; opacity: 0.7;">Privacy Policy</a>
+              <a href="#" style="color: inherit; text-decoration: none; opacity: 0.7;">Terms of Service</a>
+              <a href="#" style="color: inherit; text-decoration: none; opacity: 0.7;">Cookie Policy</a>
+          </div>
       </div>
-      <p style="font-size:12px;color:rgba(255,255,255,.35);margin-top:18px">Demo password for all accounts: <strong
-          style="color:rgba(255,255,255,.55)">password</strong></p>
-    </div>
-  </div>
-
-  <footer>
-    <div class="footer-logo">
-      <div class="logo-mark" style="width:26px;height:26px;font-size:13px">🚀</div>Sprint<em>Desk</em>
-    </div>
-    <div class="footer-copy">© 2025 SprintDesk · Agile Project Management · PHP + MySQL</div>
-    <div class="footer-links">
-      <a href="#features">Features</a>
-      <a href="#how">How It Works</a>
-      <a href="<?= URL_LOGIN ?>">Login</a>
-    </div>
   </footer>
+
 
   <script>
     'use strict';
@@ -2608,57 +2882,219 @@ if (isLoggedIn())
     });
 
     /* ============================================================ */
-    /* SLIDESHOW                                                     */
+    /* UNIFIED SLIDESHOW CLASS                                      */
     /* ============================================================ */
-    const panels = Array.from(document.querySelectorAll('.slide-panel'));
-    const tabs = Array.from(document.querySelectorAll('.slide-tab'));
-    const dots = Array.from(document.querySelectorAll('.snav-dot'));
-    const prevBtn = document.getElementById('prevBtn');
-    const nextBtn = document.getElementById('nextBtn');
-    const autoBtn = document.getElementById('autoPlayBtn');
-    const urlEl = document.getElementById('slideUrl');
-    const badgeEl = document.getElementById('slideBadge');
-    const infoEl = document.getElementById('snavInfo');
-    let cur = 0, autoTimer = null, isAuto = false;
+    class Slideshow {
+      constructor(id, auto = false, interval = 4000) {
+        this.el = document.getElementById(id);
+        this.panels = Array.from(this.el.querySelectorAll('.slide-panel'));
+        this.tabs = Array.from(this.el.querySelectorAll('.slide-tab'));
+        this.dotsWrap = this.el.querySelector('.snav-dots');
+        this.prevBtn = this.el.querySelector('.prev');
+        this.nextBtn = this.el.querySelector('.next');
+        this.urlEl = this.el.querySelector('.sc-url');
+        this.badgeEl = this.el.querySelector('.sc-badge');
+        this.infoEl = this.el.querySelector('.snav-info');
+        this.progress = this.el.querySelector('.slide-progress');
+        this.cur = 0;
+        this.interval = interval;
+        this.timer = null;
 
-    function goTo(idx) {
-      panels[cur].classList.remove('active'); panels[cur].classList.add('out');
-      setTimeout(() => panels[cur]?.classList.remove('out'), 420);
-      tabs[cur].classList.remove('active'); dots[cur].classList.remove('on');
-      cur = idx;
-      panels[cur].classList.add('active'); tabs[cur].classList.add('active'); dots[cur].classList.add('on');
-      urlEl.textContent = panels[cur].dataset.url || '';
-      badgeEl.textContent = `${cur + 1} of ${panels.length}`;
-      infoEl.textContent = `Slide ${cur + 1} of ${panels.length}`;
-      prevBtn.disabled = cur === 0;
-      nextBtn.disabled = cur === panels.length - 1;
-      // re-animate progress bars
-      panels[cur].querySelectorAll('.ui-prog-fill').forEach(b => { const w = b.style.width; b.style.width = '0'; setTimeout(() => b.style.width = w, 80); });
+        // Create dots if wrap exists
+        if(this.dotsWrap) {
+          this.panels.forEach((_, i) => {
+            const d = document.createElement('button');
+            d.className = `snav-dot ${i === 0 ? 'on' : ''}`;
+            d.onclick = () => this.goTo(i);
+            this.dotsWrap.appendChild(d);
+          });
+          this.dots = Array.from(this.dotsWrap.querySelectorAll('.snav-dot'));
+        }
+
+        this.tabs.forEach((t, i) => t.onclick = () => this.goTo(i));
+        if(this.prevBtn) this.prevBtn.onclick = () => this.goTo(this.cur - 1);
+        if(this.nextBtn) this.nextBtn.onclick = () => this.goTo(this.cur + 1);
+
+        if(auto) this.startAuto();
+        this.updateUI();
+      }
+
+      goTo(idx) {
+        if(idx < 0 || idx >= this.panels.length || idx === this.cur) return;
+        
+        const old = this.cur;
+        this.panels[old].classList.remove('active');
+        this.panels[old].classList.add('out');
+        setTimeout(() => this.panels[old].classList.remove('out'), 420);
+
+        this.tabs[old]?.classList.remove('active');
+        this.dots?.[old]?.classList.remove('on');
+
+        this.cur = idx;
+        this.panels[this.cur].classList.add('active');
+        this.tabs[this.cur]?.classList.add('active');
+        this.dots?.[this.cur]?.classList.add('on');
+
+        this.updateUI();
+        if(this.timer) {
+          clearInterval(this.timer);
+          this.startAuto();
+        }
+      }
+
+      updateUI() {
+        if(this.urlEl) this.urlEl.textContent = this.panels[this.cur].dataset.url || '';
+        if(this.badgeEl) this.badgeEl.textContent = `${this.cur + 1} of ${this.panels.length}`;
+        if(this.infoEl) this.infoEl.textContent = `Slide ${this.cur + 1} of ${this.panels.length}`;
+        if(this.prevBtn) this.prevBtn.disabled = this.cur === 0;
+        if(this.nextBtn) this.nextBtn.disabled = this.cur === this.panels.length - 1;
+
+        if(this.progress) {
+            this.progress.style.transition = 'none';
+            this.progress.style.width = '0%';
+            setTimeout(() => {
+                this.progress.style.transition = `width ${this.interval}ms linear`;
+                this.progress.style.width = '100%';
+            }, 10);
+        }
+
+        // Re-animate progress bars in UI mockups
+        this.panels[this.cur].querySelectorAll('.ui-prog-fill').forEach(b => {
+          const w = b.style.width; b.style.width = '0';
+          setTimeout(() => b.style.width = w, 80);
+        });
+      }
+
+      startAuto() {
+        this.timer = setInterval(() => this.goTo((this.cur + 1) % this.panels.length), this.interval);
+      }
     }
 
-    prevBtn.addEventListener('click', () => { if (cur > 0) { goTo(cur - 1); } });
-    nextBtn.addEventListener('click', () => { if (cur < panels.length - 1) goTo(cur + 1); });
-    tabs.forEach((t, i) => t.addEventListener('click', () => goTo(i)));
-    dots.forEach((d, i) => d.addEventListener('click', () => goTo(i)));
+    // REVEAL OBSERVER
+    const revealObserver = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if(entry.isIntersecting) {
+          entry.target.classList.add('revealed');
+          revealObserver.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.1 });
+    document.querySelectorAll('[data-r]').forEach(el => revealObserver.observe(el));
 
-    autoBtn.addEventListener('click', () => {
-      isAuto = !isAuto;
-      autoBtn.textContent = isAuto ? '⏸' : '▶';
-      autoBtn.style.background = isAuto ? 'var(--red)' : 'var(--brand)';
-      if (isAuto) {
-        autoTimer = setInterval(() => {
-          const next = (cur + 1) % panels.length;
-          goTo(next);
-        }, 3500);
-      } else {
-        clearInterval(autoTimer);
-      }
+    // STATS COUNTER
+    const countNumber = (el) => {
+        const target = parseInt(el.dataset.count);
+        const sfx = el.dataset.sfx || '';
+        let current = 0;
+        const speed = 2000; // 2s duration
+        const increment = target / (speed / 16);
+        
+        const update = () => {
+            current += increment;
+            if(current < target) {
+                el.textContent = Math.floor(current) + sfx;
+                requestAnimationFrame(update);
+            } else {
+                el.textContent = target + sfx;
+            }
+        };
+        update();
+    };
+
+    const statsObserver = new IntersectionObserver((entries) => {
+        if(entries[0].isIntersecting) {
+            document.querySelectorAll('.snum').forEach(countNumber);
+            statsObserver.disconnect();
+        }
+    });
+    const statsRow = document.querySelector('.stats-row');
+    if(statsRow) statsObserver.observe(statsRow);
+
+    // HERO PARALLAX
+    const heroRight = document.querySelector('.hero-right');
+    if(heroRight) {
+        document.addEventListener('mousemove', (e) => {
+            const x = (window.innerWidth / 2 - e.pageX) / 50;
+            const y = (window.innerHeight / 2 - e.pageY) / 50;
+            heroRight.style.transform = `translate(${x}px, ${y}px) rotateX(${-y}deg) rotateY(${x}deg)`;
+        });
+    }
+
+    // Initialize Main Slideshow only
+    const mainShow = new Slideshow('demo', true, 3500);
+
+    // GLOBAL SCROLL EFFECTS
+    const header = document.getElementById('nav');
+    const progress = document.getElementById('scroll-progress');
+    const navLinks = document.querySelectorAll('.nav-mid a');
+    const sections = document.querySelectorAll('section[id]');
+
+    window.addEventListener('scroll', () => {
+        // Sticky Header & Progress
+        const scrolled = window.scrollY;
+        const total = document.documentElement.scrollHeight - window.innerHeight;
+        const perc = (scrolled / total) * 100;
+        
+        if (progress) progress.style.width = `${perc}%`;
+        if (header) {
+            if(scrolled > 50) header.classList.add('stuck');
+            else header.classList.remove('stuck');
+        }
+
+        // Active Link Tracking
+        let current = "";
+        sections.forEach((section) => {
+            const sectionTop = section.offsetTop;
+            if (scrolled >= sectionTop - 150) {
+                current = section.getAttribute("id");
+            }
+        });
+
+        navLinks.forEach((link) => {
+            link.classList.remove("active");
+            const href = link.getAttribute("href");
+            if (href && href.startsWith("#") && href.substring(1) === current) {
+                link.classList.add("active");
+            }
+        });
     });
 
-    // keyboard nav
+    // STICKY SCROLL OBSERVER
+    const featItems = document.querySelectorAll('.feat-item');
+    const mockImgs = document.querySelectorAll('.mock-img');
+    
+    if(featItems.length) {
+        window.addEventListener('scroll', () => {
+            let activeFeat = 'kanban';
+            featItems.forEach(item => {
+                const rect = item.getBoundingClientRect();
+                if(rect.top < window.innerHeight / 2 && rect.bottom > window.innerHeight / 2) {
+                    activeFeat = item.dataset.feat;
+                    item.classList.add('active');
+                } else {
+                    item.classList.remove('active');
+                }
+            });
+            
+            mockImgs.forEach(img => {
+                if(img.id === `feat-${activeFeat}`) img.classList.add('active');
+                else img.classList.remove('active');
+            });
+        });
+    }
+
+    // BENTO CARD HOVER GLOW
+    document.querySelectorAll('.bento-card').forEach(card => {
+        card.onmousemove = e => {
+            const rect = card.getBoundingClientRect();
+            card.style.setProperty('--x', `${e.clientX - rect.left}px`);
+            card.style.setProperty('--y', `${e.clientY - rect.top}px`);
+        };
+    });
+    // keyboard nav for main
     document.addEventListener('keydown', e => {
-      if (e.key === 'ArrowRight' && cur < panels.length - 1) goTo(cur + 1);
-      if (e.key === 'ArrowLeft' && cur > 0) goTo(cur - 1);
+      if (e.key === 'ArrowRight') mainShow.goTo((mainShow.cur + 1) % mainShow.panels.length);
+      if (e.key === 'ArrowLeft') mainShow.goTo((mainShow.cur - 1 + mainShow.panels.length) % mainShow.panels.length);
     });
   </script>
 </body>

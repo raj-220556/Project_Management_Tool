@@ -486,6 +486,15 @@ $savedEmail = htmlspecialchars($_POST['email'] ?? '', ENT_QUOTES);
                     </div>
                 </div>
                 <p style="text-align:center;font-size:12.5px;color:var(--text3);margin-top:16px; opacity: 0.85;">Demo password for all accounts: <strong style="color:var(--text); font-weight: 700;">password</strong></p>
+                
+                <footer style="margin-top:48px; padding-top:24px; border-top:1px solid var(--border); text-align:center; font-size:12px; color:var(--text3);">
+                    <div style="margin-bottom:8px;">© <?= date('Y') ?> SprintDesk Inc. · All rights reserved.</div>
+                    <div style="display:flex; justify-content:center; gap:16px;">
+                        <a href="<?= URL_LANDING ?>" style="color:inherit; text-decoration:none;">Product</a>
+                        <a href="#" style="color:inherit; text-decoration:none;">Privacy Policy</a>
+                        <a href="#" style="color:inherit; text-decoration:none;">Terms of Service</a>
+                    </div>
+                </footer>
             </div>
         </div>
     </div>
