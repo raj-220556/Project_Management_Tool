@@ -25,9 +25,9 @@
     --surface2: #fcf4dd !important;
     --border: #d5ccb6 !important;
     --border2: rgba(101, 123, 131, 0.08) !important;
-    --text: #657b83 !important;
-    --text2: #586e75 !important;
-    --text3: #93a1a1 !important;
+    --text: #172B4D !important;
+    --text2: #42526E !important;
+    --text3: #6B778C !important;
     --sh-sm: 0 1px 1px rgba(9, 30, 66, 0.25), 0 0 1px rgba(9, 30, 66, 0.31) !important;
     --sh-md: 0 8px 16px -4px rgba(9, 30, 66, 0.15), 0 0 1px rgba(9, 30, 66, 0.31) !important;
     --sh-lg: 0 20px 32px -8px rgba(9, 30, 66, 0.15), 0 0 1px rgba(9, 30, 66, 0.31) !important;
@@ -39,6 +39,7 @@
     --topbar-h: 70px !important;
     --fb: 'Inter', 'Roboto', sans-serif !important;
     --fm: 'Inter', monospace !important;
+    --sidebar-txt: #172B4D !important;
 }
 
 [data-theme=dark] {
@@ -58,6 +59,7 @@
     --sh-sm: 0 1px 3px rgba(0, 0, 0, 0.4) !important;
     --sh-md: 0 10px 20px rgba(0, 0, 0, 0.5) !important;
     --sh-lg: 0 20px 40px rgba(0, 0, 0, 0.7) !important;
+    --sidebar-txt: #F9FAFB !important;
 }
 
 /* DASHBOARD & COMPONENT ENHANCEMENTS */
@@ -126,7 +128,7 @@ body {
     transition: background .35s, color .35s;
     overflow-x: hidden;
     font-size: 14px;
-    font-weight: 400;
+    font-weight: 500;
     line-height: 1.6;
     -webkit-font-smoothing: antialiased;
 }
@@ -274,7 +276,7 @@ textarea {
     border-radius: 8px;
     color: var(--text2);
     font-size: 14px;
-    font-weight: 500;
+    font-weight: 600;
     transition: all .2s;
     margin-bottom: 4px;
     white-space: nowrap;
@@ -343,8 +345,8 @@ textarea {
     width: 40px;
     height: 21px;
     border-radius: var(--rf);
-    background: rgba(255, 255, 255, .1);
-    border: none;
+    background: var(--border);
+    border: 1px solid var(--border);
     position: relative;
     cursor: pointer;
     transition: background .2s;
@@ -406,7 +408,7 @@ textarea {
 .tf-sb-uname {
     font-size: 12.5px;
     color: var(--text);
-    font-weight: 600;
+    font-weight: 700;
     white-space: nowrap;
     line-height: 1.3
 }
@@ -414,7 +416,7 @@ textarea {
 .tf-sb-urole {
     font-size: 10.5px;
     color: var(--text3);
-    font-weight: 500;
+    font-weight: 600;
 }
 
 .tf-sb-logout {
@@ -423,10 +425,10 @@ textarea {
     gap: 9px;
     padding: 8px 11px;
     border-radius: var(--r2);
-    color: #fff;
+    color: var(--text);
     font-size: 13px;
     border: none;
-    background: none;
+    background: rgba(101, 123, 131, 0.05);
     width: 100%;
     cursor: pointer;
     transition: all .18s
