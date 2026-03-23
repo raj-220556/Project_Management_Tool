@@ -8,7 +8,7 @@ $orgId = currentUser()['org_id'];
 $projectId = (int)($_GET['project_id'] ?? 0);
 
 // Fetch projects for dropdown
-$projectsStmt = $db->prepare("SELECT id, name, github_url FROM tf_projects WHERE org_id=? ORDER BY name ASC");
+$projectsStmt = $db->prepare("SELECT id, name, code, description, color, github_url FROM tf_projects WHERE org_id=? ORDER BY name ASC");
 $projectsStmt->execute([$orgId]);
 $projects = $projectsStmt->fetchAll();
 
@@ -99,20 +99,38 @@ if ($project) {
     <div class="tf-main">
       <div class="tf-topbar">
         <div class="tf-topbar-title">Git Activity & Insights</div>
+        <?php if (!$project): ?>
         <div class="tf-search">
-            <select id="projectSelect" class="tf-inp" style="max-width:300px; padding: 6px 16px;">
-                <option value="">-- Select Project --</option>
-                <?php foreach($projects as $p): ?>
-                    <option value="<?= $p['id'] ?>" <?= $p['id'] == $projectId ? 'selected' : '' ?>><?= e($p['name']) ?> <?= empty($p['github_url']) ? '(No Repo)' : '' ?></option>
-                <?php endforeach; ?>
-            </select>
+            <span>🔍</span><input type="text" placeholder="Search projects..." id="searchInp" class="tf-live-search" data-target=".tf-grid-projects .tf-project-card">
         </div>
+        <?php else: ?>
+        <div>
+            <a href="git_activity.php" class="btn btn-secondary" style="text-decoration:none;">← Back to Projects</a>
+        </div>
+        <?php endif; ?>
       </div>
       <div class="tf-page">
         
         <?php if (!$project): ?>
-            <div style="text-align:center; padding: 50px; color: var(--text3);">
-                <h3>Please select a project to view Git Activity.</h3>
+            <div class="tf-page-hd a1">
+                <div>
+                    <div class="tf-title">Select Project</div>
+                    <div class="tf-subtitle">Choose a project to view its Git activity</div>
+                </div>
+            </div>
+            <div class="tf-grid-projects a2">
+                <?php foreach ($projects as $p): ?>
+                    <div class="tf-project-card" style="border-top: 4px solid <?= e($p['color']) ?>">
+                        <div class="tf-pc-body">
+                            <div class="tf-pc-code"><?= e($p['code']) ?></div>
+                            <h3 class="tf-pc-title"><?= e($p['name']) ?></h3>
+                            <p class="tf-pc-desc"><?= e($p['description'] ?: 'No description provided.') ?></p>
+                        </div>
+                        <div class="tf-pc-foot">
+                            <a href="git_activity.php?project_id=<?= $p['id'] ?>" class="tf-pc-link">Select Project →</a>
+                        </div>
+                    </div>
+                <?php endforeach; ?>
             </div>
         <?php elseif (empty($project['github_url'])): ?>
             <div style="text-align:center; padding: 50px; color: var(--text3);">
@@ -276,13 +294,7 @@ if ($project) {
   </div>
 
   <script>
-      document.getElementById('projectSelect')?.addEventListener('change', function(e) {
-          if (e.target.value) {
-              window.location.href = 'git_activity.php?project_id=' + e.target.value;
-          } else {
-              window.location.href = 'git_activity.php';
-          }
-      });
+
 
       function showToast(msg, error = false) {
           const t = document.getElementById('toast');
