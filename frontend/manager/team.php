@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>Team · SprintDesk</title>
+    <title>Project Members · SprintDesk</title>
     <?php
     require_once __DIR__ . '/../../backend/shared/includes/init.php';
     requireLogin('manager');
@@ -13,66 +13,67 @@
     $uid = currentUser()['id'];
     $orgId = currentUser()['org_id'];
 
-    // STRICT HIERARCHY: Managers can only create users (developers)
-    if ($_SERVER['REQUEST_METHOD']==='POST' && ($_POST['action']??'')==='add') {
-        $name  = trim($_POST['name']??'');
-        $email = trim($_POST['email']??'');
-        $pass  = $_POST['password']??'';
-        $orgKeyInp = trim($_POST['org_key']??'');
-        $role  = 'developer'; // Database role for Users
-        
-        $okQ = db()->prepare("SELECT org_key FROM tf_organizations WHERE id=?");
-        $okQ->execute([$orgId]);
-        $realKey = $okQ->fetchColumn();
+    $addErr = '';
+    $okMsg = '';
 
-        if ($name && $email && $pass && $orgKeyInp) {
-            if (!$realKey) {
-                $addErr = 'Organization Key not configured! Please ask your Admin to set it in Settings.';
-            } elseif ($orgKeyInp !== $realKey) {
-                $addErr = 'Invalid Organization Key. You are not authorized to provision users.';
-            } else {
+    // Handle Add Member
+    if ($_SERVER['REQUEST_METHOD']==='POST' && ($_POST['action']??'')==='add_member') {
+        $projectId = (int)($_POST['project_id'] ?? 0);
+        $userId = (int)($_POST['user_id'] ?? 0);
+        
+        if ($projectId && $userId) {
+            $chk = $db->prepare("SELECT id FROM tf_projects WHERE id=? AND manager_id=?");
+            $chk->execute([$projectId, $uid]);
+            if ($chk->fetch()) {
                 try {
-                    $db->prepare('INSERT INTO tf_users(name,email,password,role,org_id) VALUES(?,?,?,?,?)')->execute([
-                        $name, $email, password_hash($pass, PASSWORD_DEFAULT), $role, $orgId
-                    ]);
-                    $newUid = $db->lastInsertId();
-                    logActivity($uid, null, null, 'added developer', 'user', $newUid, '', $name);
-                    notifyUser($newUid, 'Welcome!', 'Your account has been created.', 'dashboard.php');
-                    notifyUser($uid, 'User Added', "User '$name' successfully joined your team.", 'team.php');
-                    header('Location: team.php?ok=1&celebrate=1');
-                    exit;
-                } catch (Exception $e) {
-                    $addErr = 'Email already exists.';
-                }
-            }
-        } else { $addErr = 'Please fill in all fields including the Organization Key.'; }
+                    $db->prepare("INSERT INTO tf_project_members (project_id, user_id) VALUES (?, ?)")->execute([$projectId, $userId]);
+                    logActivity($uid, $projectId, null, 'added member to project', 'project', $userId);
+                    header("Location: team.php?project_id=$projectId&ok=1"); exit;
+                } catch (Exception $e) { $addErr = 'User is already a member of this project.'; }
+            } else { $addErr = 'Invalid project selected.'; }
+        } else { $addErr = 'Please select a user.'; }
     }
 
-    // Handle Delete
-    if (isset($_GET['del'])) {
-        $did = (int) $_GET['del'];
-        if ($did != currentUser()['id']) {
-            $chk = $db->prepare("SELECT id FROM tf_users WHERE id=? AND org_id=? AND role='developer'");
-            $chk->execute([$did, $orgId]);
-            if ($chk->fetch()) {
-                db()->prepare('DELETE FROM tf_notifications WHERE user_id=?')->execute([$did]);
-                db()->prepare('DELETE FROM tf_activity WHERE user_id=?')->execute([$did]);
-                db()->prepare('UPDATE tf_tasks SET assigned_to=NULL WHERE assigned_to=?')->execute([$did]);
-                db()->prepare('DELETE FROM tf_users WHERE id=?')->execute([$did]);
-                logActivity($uid, null, null, 'removed developer', 'user', $did);
-                
-                notifyUser($uid, 'User Deleted', "A developer was permanently removed from your team.", 'team.php');
-                header('Location: team.php?ok=2');
-                exit;
-            }
+    // Handle Remove Member
+    if (isset($_GET['remove_member']) && isset($_GET['project_id'])) {
+        $mid = (int)$_GET['remove_member'];
+        $pid = (int)$_GET['project_id'];
+        
+        $chk = $db->prepare("SELECT id FROM tf_projects WHERE id=? AND manager_id=?");
+        $chk->execute([$pid, $uid]);
+        if ($chk->fetch()) {
+            $db->prepare("DELETE FROM tf_project_members WHERE project_id=? AND user_id=?")->execute([$pid, $mid]);
+            logActivity($uid, $pid, null, 'removed member from project', 'project', $mid);
+            header("Location: team.php?project_id=$pid&ok=2"); exit;
         }
     }
 
-    // Get all developers in the current organization
-    $orgId = currentUser()['org_id'];
-    $teamQ = $db->prepare("SELECT * FROM tf_users WHERE org_id=? AND role='developer' AND is_active=1");
-    $teamQ->execute([$orgId]);
-    $team = $teamQ->fetchAll();
+    // Fetch Projects managed by this manager
+    $projects = $db->prepare("SELECT id, name FROM tf_projects WHERE manager_id = ? ORDER BY name ASC");
+    $projects->execute([$uid]);
+    $projects = $projects->fetchAll();
+
+    // Selected Project
+    $selectedProject = (int)($_GET['project_id'] ?? ($projects[0]['id'] ?? 0));
+
+    // Fetch Members of Selected Project
+    $members = [];
+    $eligibleUsers = [];
+    if ($selectedProject) {
+        $memQ = $db->prepare("SELECT u.* FROM tf_users u JOIN tf_project_members pm ON u.id = pm.user_id WHERE pm.project_id = ?");
+        $memQ->execute([$selectedProject]);
+        $members = $memQ->fetchAll();
+
+        // Fetch developers in org NOT in this project
+        $eligibleQ = $db->prepare("SELECT * FROM tf_users WHERE org_id = ? AND role = 'developer' AND is_active = 1 AND id NOT IN (SELECT user_id FROM tf_project_members WHERE project_id = ?)");
+        $eligibleQ->execute([$orgId, $selectedProject]);
+        $eligibleUsers = $eligibleQ->fetchAll();
+    }
+
+    if (isset($_GET['ok'])) {
+        if ($_GET['ok'] == 1) $okMsg = "✅ Member added to project successfully.";
+        if ($_GET['ok'] == 2) $okMsg = "✅ Member removed from project.";
+    }
     ?>
 </head>
 
@@ -82,64 +83,86 @@
         <?php include __DIR__ . '/../../backend/shared/includes/sidebar.php'; ?>
         <div class="tf-main">
             <div class="tf-topbar">
-                <div class="tf-topbar-title">Team Management</div>
-                <button class="btn btn-primary btn-sm" onclick="document.getElementById('addModal').classList.add('open')">+ Add User</button>
+                <div class="tf-topbar-title">Project Member Management</div>
+                <div>
+                     <select class="tf-inp" onchange="window.location.href='team.php?project_id='+this.value" style="width: 220px; background:var(--surface);">
+                        <?php foreach ($projects as $p): ?>
+                            <option value="<?= $p['id'] ?>" <?= $p['id'] == $selectedProject ? 'selected' : '' ?>><?= e($p['name']) ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <?php if ($selectedProject): ?>
+                    <button class="btn btn-primary btn-sm" onclick="document.getElementById('addModal').classList.add('open')">+ Add Member</button>
+                <?php endif; ?>
             </div>
             <div class="tf-page">
                 <div class="tf-page-hd a1">
                     <div>
-                        <div class="tf-title">Development Team</div>
-                        <div class="tf-subtitle">View and manage users available for your projects</div>
+                        <div class="tf-title">Project Members</div>
+                        <div class="tf-subtitle">Manage developers assigned to your selected project</div>
                     </div>
                 </div>
 
-                <?php if(isset($_GET['ok']) && $_GET['ok']==1): ?><div class="tf-toast-inline" style="margin-bottom:16px">✅ User created successfully.</div><?php endif; ?>
-                <?php if(isset($_GET['ok']) && $_GET['ok']==2): ?><div class="tf-toast-inline" style="margin-bottom:16px; background:rgba(239,68,68,0.1); color:#ef4444; border-color:rgba(239,68,68,0.2);">✅ User permanently deleted.</div><?php endif; ?>
+                <?php if($okMsg): ?><div class="tf-toast-inline" style="margin-bottom:16px"><?= $okMsg ?></div><?php endif; ?>
                 <?php if(!empty($addErr)): ?><div class="tf-err" style="margin-bottom:16px">⚠️ <?= e($addErr) ?></div><?php endif; ?>
 
-                <div class="g4 a2">
-                    <?php foreach ($team as $m): ?>
-                        <div class="card" style="text-align:center;padding:24px">
-                            <div class="tf-sb-avatar" style="width:60px;height:60px;margin:0 auto 14px;font-size:20px">
-                                <?= userInitials($m['name']) ?>
+                <?php if (!$selectedProject): ?>
+                    <p style="padding:40px;text-align:center;color:var(--text3);">You are not managing any projects or no project is selected.</p>
+                <?php else: ?>
+                    <div class="g4 a2">
+                        <?php foreach ($members as $m): ?>
+                            <div class="card" style="text-align:center;padding:24px">
+                                <div class="tf-sb-avatar" style="width:60px;height:60px;margin:0 auto 14px;font-size:20px">
+                                    <?= userInitials($m['name']) ?>
+                                </div>
+                                <div style="font-weight:700;font-size:15px">
+                                    <?= e($m['name']) ?>
+                                </div>
+                                <div style="font-size:12px;color:var(--text3);margin-bottom:16px">
+                                    <?= e($m['email']) ?>
+                                </div>
+                                <div style="display:flex; justify-content:center; gap:8px; align-items:center;">
+                                    <span class="badge b-developer">Developer</span>
+                                    <a href="javascript:void(0)" onclick="if(confirm('Remove this developer from the project?')) window.location.href='team.php?project_id=<?= $selectedProject ?>&remove_member=<?= $m['id'] ?>'" style="color:#ef4444; font-size:12px; text-decoration:none; padding:4px 8px; border-radius:6px; background:rgba(239,68,68,0.1);">Remove</a>
+                                </div>
                             </div>
-                            <div style="font-weight:700;font-size:15px">
-                                <?= e($m['name']) ?>
-                            </div>
-                            <div style="font-size:12px;color:var(--text3);margin-bottom:16px">
-                                <?= e($m['email']) ?>
-                            </div>
-                            <div style="display:flex; justify-content:center; gap:8px; align-items:center;">
-                                <span class="badge b-developer">User</span>
-                                <a href="javascript:void(0)" onclick="confirmDelete('Are you sure you want to permanently delete this user? Their assigned tasks will become unassigned.', () => window.location.href='team.php?del=<?= $m['id'] ?>')" style="color:#ef4444; font-size:12px; text-decoration:none; padding:4px 8px; border-radius:6px; background:rgba(239,68,68,0.1);">Delete</a>
-                            </div>
-                        </div>
-                    <?php endforeach; ?>
-                </div>
+                        <?php endforeach; ?>
+                        <?php if (empty($members)): ?>
+                            <p style="padding:20px;text-align:center;color:var(--text3);grid-column:1/-1">No members assigned to this project yet.</p>
+                        <?php endif; ?>
+                    </div>
+                <?php endif; ?>
             </div>
         </div>
     </div>
 
-    <!-- ADD MODAL -->
+    <!-- ADD MEMBER MODAL -->
+    <?php if ($selectedProject): ?>
     <div class="tf-overlay" id="addModal">
       <div class="tf-modal">
-        <div class="tf-modal-hd"><div class="tf-modal-title">Add New User</div><button class="tf-modal-close" onclick="document.getElementById('addModal').classList.remove('open')">✕</button></div>
+        <div class="tf-modal-hd"><div class="tf-modal-title">Add Member to Project</div><button class="tf-modal-close" onclick="document.getElementById('addModal').classList.remove('open')">✕</button></div>
         <form method="POST">
-          <input type="hidden" name="action" value="add">
+          <input type="hidden" name="action" value="add_member">
+          <input type="hidden" name="project_id" value="<?= $selectedProject ?>">
           <div class="tf-modal-body">
-            <div class="tf-fg"><label class="tf-lbl">Full Name</label><input type="text" name="name" class="tf-inp" required placeholder="John Doe"></div>
-            <div class="tf-fg"><label class="tf-lbl">Email</label><input type="email" name="email" class="tf-inp" required placeholder="john@example.com"></div>
-            <div class="tf-fg"><label class="tf-lbl">Password</label><input type="password" name="password" class="tf-inp" required placeholder="min 8 characters"></div>
-            <div class="tf-fg"><label class="tf-lbl" style="color:var(--brand)">Organization Key</label><input type="text" name="org_key" class="tf-inp" required placeholder="Required Security Passcode"></div>
-            <div class="tf-fg"><label class="tf-lbl">Role</label>
-              <input type="text" class="tf-inp" value="User" disabled style="opacity:0.7; cursor:not-allowed;">
-              <input type="hidden" name="role" value="developer">
+            <div class="tf-fg">
+                <label class="tf-lbl">Select Existing User (Developer)</label>
+                <select name="user_id" class="tf-inp" required style="background:var(--surface);">
+                     <option value="">-- Select Developer --</option>
+                     <?php foreach ($eligibleUsers as $u): ?>
+                        <option value="<?= $u['id'] ?>"><?= e($u['name']) ?> (<?= e($u['email']) ?>)</option>
+                     <?php endforeach; ?>
+                </select>
             </div>
           </div>
-          <div class="tf-modal-foot"><button type="button" class="btn btn-secondary" onclick="document.getElementById('addModal').classList.remove('open')">Cancel</button><button type="submit" class="btn btn-primary">Create User</button></div>
+          <div class="tf-modal-foot">
+            <button type="button" class="btn btn-secondary" onclick="document.getElementById('addModal').classList.remove('open')">Cancel</button>
+            <button type="submit" class="btn btn-primary">Add Member</button>
+          </div>
         </form>
       </div>
     </div>
+    <?php endif; ?>
 </body>
 
 </html>

@@ -35,7 +35,7 @@ $posQ->execute($params);
 $maxPos = (int)$posQ->fetch()['maxp'] + 1;
 
 try {
-    $ins = $db->prepare("INSERT INTO tf_tasks (project_id, sprint_id, title, description, type, status, priority, assigned_to, story_points, position, created_by, org_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+    $ins = $db->prepare("INSERT INTO tf_tasks (project_id, sprint_id, title, description, type, status, priority, assigned_to, story_points, position, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
     $ins->execute([
         $project_id,
         $sprint_id,
@@ -47,8 +47,7 @@ try {
         $assigned_to,
         $points,
         $maxPos,
-        $u['id'],
-        $u['org_id']
+        $u['id']
     ]);
     
     $taskId = $db->lastInsertId();

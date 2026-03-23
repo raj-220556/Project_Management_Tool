@@ -20,25 +20,37 @@
         $clr = $_POST['color'] ?? '#6366F1';
         $github = trim($_POST['github_url'] ?? '');
         $github_pat = trim($_POST['github_pat'] ?? '');
+        $orgKeyInp = trim($_POST['org_key'] ?? '');
 
-        if ($name && $code) {
-            try {
-                $db->prepare('INSERT INTO tf_projects(name,code,description,manager_id,color,github_url,github_pat,created_by,org_id) VALUES(?,?,?,?,?,?,?,?,?)')
-                    ->execute([$name, $code, $desc, $mid ?: null, $clr, $github ?: null, $github_pat ?: null, currentUser()['id'], currentUser()['org_id']]);
-                $pid = $db->lastInsertId();
-                logActivity(currentUser()['id'], $pid, null, 'created project', 'project', $pid);
-                $orgUsers = $db->prepare("SELECT id FROM tf_users WHERE org_id=?");
-                $orgUsers->execute([currentUser()['org_id']]);
-                foreach($orgUsers->fetchAll() as $u) {
-                    notifyUser($u['id'], 'New Project', "Project '$name' was created.", "projects.php");
+        // Fetch live org key
+        $okQ = $db->prepare("SELECT org_key FROM tf_organizations WHERE id=?");
+        $okQ->execute([currentUser()['org_id']]);
+        $realKey = $okQ->fetchColumn();
+
+        if ($name && $code && $orgKeyInp) {
+            if (!$realKey) {
+                $addErr = 'Organization Key not configured! Please configure it in Settings first.';
+            } elseif ($orgKeyInp !== $realKey) {
+                $addErr = 'Invalid Organization Key. You are not authorized to create projects.';
+            } else {
+                try {
+                    $db->prepare('INSERT INTO tf_projects(name,code,description,manager_id,color,github_url,github_pat,created_by,org_id) VALUES(?,?,?,?,?,?,?,?,?)')
+                        ->execute([$name, $code, $desc, $mid ?: null, $clr, $github ?: null, $github_pat ?: null, currentUser()['id'], currentUser()['org_id']]);
+                    $pid = $db->lastInsertId();
+                    logActivity(currentUser()['id'], $pid, null, 'created project', 'project', $pid);
+                    $orgUsers = $db->prepare("SELECT id FROM tf_users WHERE org_id=?");
+                    $orgUsers->execute([currentUser()['org_id']]);
+                    foreach($orgUsers->fetchAll() as $u) {
+                        notifyUser($u['id'], 'New Project', "Project '$name' was created.", "projects.php");
+                    }
+                    header('Location: projects.php?ok=1&celebrate=1');
+                    exit;
+                } catch (Exception $e) {
+                    $addErr = 'Project code already exists.';
                 }
-                header('Location: projects.php?ok=1&celebrate=1');
-                exit;
-            } catch (Exception $e) {
-                $addErr = 'Project code already exists.';
             }
         } else {
-            $addErr = 'Please fill in all fields.';
+            $addErr = 'Please fill in all fields including the Organization Key.';
         }
     }
 
@@ -158,8 +170,10 @@
                         <div class="tf-fg"><label class="tf-lbl">GitHub Repository (Optional)</label><input type="url" name="github_url"
                                 class="tf-inp" placeholder="https://github.com/org/repo"></div>
                     </div>
-                    <div class="tf-fg" style="margin-top: 16px;"><label class="tf-lbl">GitHub PAT Token (Optional, fallback to .env)</label><input type="password" name="github_pat"
-                            class="tf-inp" placeholder="ghp_xxx..."></div>
+                    <div class="g2" style="margin-top:16px;">
+                        <input type="password" name="github_pat" class="tf-inp" placeholder="GitHub PAT Token (Optional)">
+                        <input type="text" name="org_key" class="tf-inp" required placeholder="Organization Key *" style="border-color:var(--brand)">
+                    </div>
                 </div>
                 <div class="tf-modal-foot"><button type="button" class="btn btn-secondary"
                         onclick="document.getElementById('addModal').classList.remove('open')">Cancel</button><button
