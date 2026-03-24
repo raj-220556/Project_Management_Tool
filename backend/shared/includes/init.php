@@ -31,13 +31,6 @@ define('URL_DEVELOPER', APP_URL . '/frontend/developer/dashboard.php');
 define('URL_ORG_MANAGER', APP_URL . '/frontend/org_manager/dashboard.php');
 define('URL_API', APP_URL . '/backend/api');
 
-// ---- OAuth (optional) ----
-define('GOOGLE_CLIENT_ID', 'YOUR_GOOGLE_CLIENT_ID');
-define('GOOGLE_CLIENT_SECRET', 'YOUR_GOOGLE_CLIENT_SECRET');
-define('GOOGLE_REDIRECT', APP_URL . '/backend/auth/oauth_google.php');
-define('GITHUB_CLIENT_ID', 'YOUR_GITHUB_CLIENT_ID');
-define('GITHUB_CLIENT_SECRET', 'YOUR_GITHUB_CLIENT_SECRET');
-define('GITHUB_REDIRECT', APP_URL . '/backend/auth/oauth_github.php');
 
 // ============================================================
 // DATABASE CONNECTION
