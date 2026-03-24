@@ -184,6 +184,10 @@ function loadEnv(): void
     }
 }
 loadEnv();
+$autoloadPath = dirname(__DIR__, 3) . '/vendor/autoload.php';
+if (file_exists($autoloadPath)) {
+    require_once $autoloadPath;
+}
 
 function getGitHubActivity(int $projectId = 0): void
 {
@@ -326,5 +330,50 @@ function jsonResponse(array $data, int $code = 200): never
     header('Content-Type: application/json');
     echo json_encode($data);
     exit;
+}
+
+function sendSystemEmail(string $to, string $subject, string $bodyHTML): bool
+{
+    if (!class_exists('PHPMailer\PHPMailer\PHPMailer')) {
+        error_log("PHPMailer class not found. Make sure Composer autoload is required.");
+        return false;
+    }
+
+    $mail = new PHPMailer\PHPMailer\PHPMailer(true);
+    try {
+        // Server settings
+        $mail->isSMTP();
+        $mail->Host       = $_ENV['SMTP_HOST'] ?? '';
+        $mail->SMTPAuth   = true;
+        $mail->Username   = $_ENV['SMTP_USER'] ?? '';
+        $mail->Password   = $_ENV['SMTP_PASS'] ?? '';
+        
+        // Port configuration
+        $port = (int)($_ENV['SMTP_PORT'] ?? 587);
+        $mail->Port = $port;
+        if ($port === 465) {
+            $mail->SMTPSecure = PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_SMTPS;
+        } else {
+            $mail->SMTPSecure = PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_STARTTLS;
+        }
+
+        // Recipients
+        $fromEmail = $_ENV['SMTP_FROM_EMAIL'] ?? $_ENV['SMTP_USER'] ?? 'admin@sprintdesk.com';
+        $fromName  = $_ENV['SMTP_FROM_NAME'] ?? 'SprintDesk Admin';
+        $mail->setFrom($fromEmail, $fromName);
+        $mail->addAddress($to);
+
+        // Content
+        $mail->isHTML(true);
+        $mail->Subject = $subject;
+        $mail->Body    = $bodyHTML;
+        $mail->AltBody = strip_tags(str_replace(['<br>', '<br/>', '</p>'], "\n", $bodyHTML));
+
+        $mail->send();
+        return true;
+    } catch (Exception $e) {
+        error_log("Message could not be sent. Mailer Error: {$mail->ErrorInfo}");
+        return false;
+    }
 }
 ?>

@@ -59,6 +59,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'appro
             $db->prepare("UPDATE tf_org_requests SET status = 'approved' WHERE id = ?")->execute([$req_id]);
             
             $db->commit();
+            // Send Email Notification
+            $loginLink = APP_URL . '/frontend/auth/login.php';
+            $subject = "Your Organization has been Approved!";
+            $bodyHTML = "<h3>Hello " . htmlspecialchars($req['org_name']) . " Admin,</h3>
+<p>Great news! Your request to register the organization <strong>" . htmlspecialchars($req['org_name']) . "</strong> has been approved by the Global Manager.</p>
+<div style='background: #f8fafc; padding: 15px; border-radius: 6px; margin: 15px 0;'>
+    <p style='margin: 0 0 5px 0;'><strong>Organization ID:</strong> {$oid}</p>
+    <p style='margin: 0;'><strong>Organization Key:</strong> {$org_key}</p>
+</div>
+<p>You can now log in and start managing your workspace.</p>
+<p><a href='{$loginLink}' style='display:inline-block;padding:10px 20px;background:#6366f1;color:#fff;text-decoration:none;border-radius:5px;'>Log In to SprintDesk</a></p>";
+            sendSystemEmail($req['email'], $subject, $bodyHTML);
+
             logActivity(currentUser()['id'], null, null, 'approved request', 'organization', $oid, '', $req['org_name']);
             header("Location: organizations.php?ok=3"); exit;
         } catch (Exception $e) {
