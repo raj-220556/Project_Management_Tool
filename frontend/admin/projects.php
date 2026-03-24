@@ -38,6 +38,34 @@
                         ->execute([$name, $code, $desc, $mid ?: null, $clr, $github ?: null, $github_pat ?: null, currentUser()['id'], currentUser()['org_id']]);
                     $pid = $db->lastInsertId();
                     logActivity(currentUser()['id'], $pid, null, 'created project', 'project', $pid);
+                    
+                    if ($mid) {
+                        $mgrStmt = $db->prepare("SELECT name, email FROM tf_users WHERE id = ?");
+                        $mgrStmt->execute([$mid]);
+                        $mgr = $mgrStmt->fetch();
+                        if ($mgr) {
+                            $adminName = currentUser()['name'];
+                            $adminEmail = currentUser()['email'];
+                            $subject = "New Project Assigned: " . $name;
+                            $bodyHTML = "
+                                <div style='font-family: Arial, sans-serif; color: #333; line-height: 1.6;'>
+                                    <h2 style='color: #6366f1;'>New Project Assignment</h2>
+                                    <p>Hello <strong>" . htmlspecialchars($mgr['name']) . "</strong>,</p>
+                                    <p>Admin <strong>" . htmlspecialchars($adminName) . "</strong> (" . htmlspecialchars($adminEmail) . ") has assigned you as the manager for a new project.</p>
+                                    <div style='background: #f8fafc; padding: 15px; border-left: 4px solid #6366f1; margin: 15px 0;'>
+                                        <h3 style='margin-top: 0;'>" . htmlspecialchars($name) . "</h3>
+                                        <p style='margin-bottom: 0;'>" . nl2br(htmlspecialchars($desc ?: 'No description provided.')) . "</p>
+                                    </div>
+                                    <p>Log in to SprintDesk to view the details and start managing your project.</p>
+                                    <p><a href='" . APP_URL . "/frontend/auth/login.php' style='display:inline-block;padding:10px 20px;background:#6366f1;color:#fff;text-decoration:none;border-radius:5px;'>Log In to SprintDesk</a></p>
+                                    <hr style='border: none; border-top: 1px solid #eaeaea; margin: 20px 0;'>
+                                    <p style='font-size: 12px; color: #777;'>Regards,<br>SprintDesk Team</p>
+                                </div>
+                            ";
+                            sendSystemEmail($mgr['email'], $subject, $bodyHTML);
+                        }
+                    }
+
                     $orgUsers = $db->prepare("SELECT id FROM tf_users WHERE org_id=?");
                     $orgUsers->execute([currentUser()['org_id']]);
                     foreach($orgUsers->fetchAll() as $u) {
