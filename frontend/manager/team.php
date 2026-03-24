@@ -28,6 +28,33 @@
                 try {
                     $db->prepare("INSERT INTO tf_project_members (project_id, user_id) VALUES (?, ?)")->execute([$projectId, $userId]);
                     logActivity($uid, $projectId, null, 'added member to project', 'project', $userId);
+
+                    $devStmt = $db->prepare("SELECT name, email FROM tf_users WHERE id = ?");
+                    $devStmt->execute([$userId]);
+                    $dev = $devStmt->fetch();
+
+                    $projStmt = $db->prepare("SELECT name FROM tf_projects WHERE id = ?");
+                    $projStmt->execute([$projectId]);
+                    $projName = $projStmt->fetchColumn();
+
+                    if ($dev && $projName) {
+                        $mgrName = currentUser()['name'];
+                        $mgrEmail = currentUser()['email'];
+                        $subject = "Added to Project Team: " . $projName;
+                        $bodyHTML = "
+                            <div style='font-family: Arial, sans-serif; color: #333; line-height: 1.6;'>
+                                <h2 style='color: #6366f1;'>Project Team Update</h2>
+                                <p>Hello <strong>" . htmlspecialchars($dev['name']) . "</strong>,</p>
+                                <p>You have been added as a team member for the project <strong>" . htmlspecialchars($projName) . "</strong>.</p>
+                                <p>This action was performed by your manager: <strong>" . htmlspecialchars($mgrName) . "</strong> (" . htmlspecialchars($mgrEmail) . ").</p>
+                                <p><a href='" . APP_URL . "/frontend/auth/login.php' style='display:inline-block;padding:10px 20px;background:#6366f1;color:#fff;text-decoration:none;border-radius:5px;'>Log In to SprintDesk</a></p>
+                                <hr style='border: none; border-top: 1px solid #eaeaea; margin: 20px 0;'>
+                                <p style='font-size: 12px; color: #777;'>Regards,<br>SprintDesk Team</p>
+                            </div>
+                        ";
+                        sendSystemEmail($dev['email'], $subject, $bodyHTML);
+                    }
+
                     header("Location: team.php?project_id=$projectId&ok=1"); exit;
                 } catch (Exception $e) { $addErr = 'User is already a member of this project.'; }
             } else { $addErr = 'Invalid project selected.'; }

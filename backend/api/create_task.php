@@ -55,6 +55,35 @@ try {
     
     if ($assigned_to) {
         notifyUser($assigned_to, 'New Task Assigned', "You have been assigned to task: $title", "kanban.php?sprint=$sprint_id");
+        
+        $devStmt = $db->prepare("SELECT name, email FROM tf_users WHERE id = ?");
+        $devStmt->execute([$assigned_to]);
+        $dev = $devStmt->fetch();
+
+        $projStmt = $db->prepare("SELECT name FROM tf_projects WHERE id = ?");
+        $projStmt->execute([$project_id]);
+        $projName = $projStmt->fetchColumn();
+
+        if ($dev && $projName) {
+            $mgrName = $u['name'];
+            $mgrEmail = $u['email'];
+            $subject = "New Task Assigned: " . $title;
+            $bodyHTML = "
+                <div style='font-family: Arial, sans-serif; color: #333; line-height: 1.6;'>
+                    <h2 style='color: #6366f1;'>New Task Assignment</h2>
+                    <p>Hello <strong>" . htmlspecialchars($dev['name']) . "</strong>,</p>
+                    <p>You have been assigned a new task by <strong>" . htmlspecialchars($mgrName) . "</strong> (" . htmlspecialchars($mgrEmail) . ") in the project <strong>" . htmlspecialchars($projName) . "</strong>.</p>
+                    <div style='background: #f8fafc; padding: 15px; border-left: 4px solid #6366f1; margin: 15px 0;'>
+                        <h3 style='margin-top: 0;'>" . htmlspecialchars($title) . "</h3>
+                        <p style='margin-bottom: 0;'>" . nl2br(htmlspecialchars($desc ?: 'No description provided.')) . "</p>
+                    </div>
+                    <p><a href='" . APP_URL . "/frontend/auth/login.php' style='display:inline-block;padding:10px 20px;background:#6366f1;color:#fff;text-decoration:none;border-radius:5px;'>View Task in SprintDesk</a></p>
+                    <hr style='border: none; border-top: 1px solid #eaeaea; margin: 20px 0;'>
+                    <p style='font-size: 12px; color: #777;'>Regards,<br>SprintDesk Team</p>
+                </div>
+            ";
+            sendSystemEmail($dev['email'], $subject, $bodyHTML);
+        }
     }
 
     jsonResponse(['ok' => true, 'id' => $taskId]);
