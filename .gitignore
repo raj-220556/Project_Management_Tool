@@ -2,3 +2,7 @@
 vendor/
 venv/
 !.env.example
+.vscode/
+*vscode*
+composer.json
+composer.lock
