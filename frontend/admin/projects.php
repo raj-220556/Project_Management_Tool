@@ -82,30 +82,87 @@
         }
     }
 
-    // Handle Delete
-    if (isset($_GET['del'])) {
-        $did = (int) $_GET['del'];
+    // Handle Deletion Request
+    if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'request_delete') {
+        $did = (int) $_POST['project_id'];
+        $reason = trim($_POST['reason'] ?? '');
         $orgId = currentUser()['org_id'];
+        $requesterId = currentUser()['id'];
         
-        $chk = $db->prepare("SELECT name FROM tf_projects WHERE id=? AND org_id=?");
-        $chk->execute([$did, $orgId]);
-        $proj = $chk->fetch();
-        if ($proj) {
-            $pname = $proj['name'];
-            db()->prepare('DELETE FROM tf_activity WHERE project_id=?')->execute([$did]);
-            db()->prepare('DELETE FROM tf_tasks WHERE project_id=?')->execute([$did]);
-            db()->prepare('DELETE FROM tf_sprints WHERE project_id=?')->execute([$did]);
-            db()->prepare('DELETE FROM tf_projects WHERE id=?')->execute([$did]);
-            
-            logActivity(currentUser()['id'], null, null, 'permanently deleted project', 'project', $did, '', $pname);
-            $orgUsers = $db->prepare("SELECT id FROM tf_users WHERE org_id=?");
-            $orgUsers->execute([$orgId]);
-            foreach($orgUsers->fetchAll() as $u) {
-                notifyUser($u['id'], 'Project Deleted', "Project '$pname' was permanently purged.", "projects.php");
+        if (empty($reason)) {
+            $addErr = 'Reason for deletion is required.';
+        } else {
+            $chk = $db->prepare("SELECT name, code FROM tf_projects WHERE id=? AND org_id=?");
+            $chk->execute([$did, $orgId]);
+            $proj = $chk->fetch();
+            if ($proj) {
+                // Check if a pending request already exists for this project
+                $pendingChk = $db->prepare("SELECT id FROM tf_project_deletion_requests WHERE project_id=? AND status='pending'");
+                $pendingChk->execute([$did]);
+                if ($pendingChk->fetch()) {
+                    $addErr = 'A deletion request is already pending for this project.';
+                } else {
+                    $db->prepare("INSERT INTO tf_project_deletion_requests (project_id, requester_id, reason, status) VALUES (?, ?, ?, 'pending')")->execute([$did, $requesterId, $reason]);
+                    $reqId = $db->lastInsertId();
+
+                    $adminsStmt = $db->prepare("SELECT id, name, email FROM tf_users WHERE org_id=? AND role='admin'");
+                    $adminsStmt->execute([$orgId]);
+                    $admins = $adminsStmt->fetchAll();
+                    $adminCount = count($admins);
+
+                    $threshold = ceil($adminCount / 2);
+                    if ($adminCount == 2) $threshold = 2; // If 2 admins, both must approve to avoid auto-deletion by the requester.
+
+                    if ($adminCount == 1 && $admins[0]['id'] == $requesterId) {
+                        // Only 1 admin in org, and it's the requester. Delete immediately.
+                        db()->prepare('DELETE FROM tf_activity WHERE project_id=?')->execute([$did]);
+                        db()->prepare('DELETE FROM tf_tasks WHERE project_id=?')->execute([$did]);
+                        db()->prepare('DELETE FROM tf_sprints WHERE project_id=?')->execute([$did]);
+                        db()->prepare('DELETE FROM tf_projects WHERE id=?')->execute([$did]);
+                        logActivity($requesterId, null, null, 'permanently deleted project', 'project', $did, '', $proj['name']);
+                        $db->prepare("UPDATE tf_project_deletion_requests SET status='completed' WHERE id=?")->execute([$reqId]);
+                        header('Location: projects.php?ok=2');
+                        exit;
+                    } else {
+                        // More than 1 admin. Proceed with approval flow.
+                        $requesterToken = bin2hex(random_bytes(32));
+                        $db->prepare("INSERT INTO tf_project_deletion_approvals (request_id, admin_id, token, status, acted_at) VALUES (?, ?, ?, 'approved', NOW())")->execute([$reqId, $requesterId, $requesterToken]);
+                        $subject = "Project Deletion Request: " . $proj['name'] . " (" . $proj['code'] . ")";
+                        
+                        foreach ($admins as $admin) {
+                            if ($admin['id'] == $requesterId) continue; // Skip requester
+
+                            $token = bin2hex(random_bytes(32));
+                            $db->prepare("INSERT INTO tf_project_deletion_approvals (request_id, admin_id, token, status) VALUES (?, ?, ?, 'pending')")->execute([$reqId, $admin['id'], $token]);
+                               
+                            $approveLink = APP_URL . "/frontend/admin/process_deletion.php?token=" . urlencode($token) . "&action=approve";
+                            $disapproveLink = APP_URL . "/frontend/admin/process_deletion.php?token=" . urlencode($token) . "&action=disapprove";
+
+                            $bodyHTML = "
+                                <div style='font-family: Arial, sans-serif; color: #333; line-height: 1.6;'>
+                                    <h2 style='color: #ef4444;'>Project Deletion Request</h2>
+                                    <p>Hello <strong>" . htmlspecialchars($admin['name']) . "</strong>,</p>
+                                    <p>Admin <strong>" . htmlspecialchars(currentUser()['name']) . "</strong> has requested to permanently delete the following project:</p>
+                                    <div style='background: #f8fafc; padding: 15px; border-left: 4px solid #ef4444; margin: 15px 0;'>
+                                        <h3 style='margin-top: 0;'>" . htmlspecialchars($proj['name']) . " (" . htmlspecialchars($proj['code']) . ")</h3>
+                                        <p style='margin-bottom: 0;'><strong>Reason given:</strong><br>" . nl2br(htmlspecialchars($reason)) . "</p>
+                                    </div>
+                                    <p>Please review this request and choose to approve or disapprove below:</p>
+                                    <div style='margin: 25px 0;'>
+                                        <a href='{$approveLink}' style='display:inline-block;padding:12px 24px;background:#22c55e;color:#fff;text-decoration:none;border-radius:5px;font-weight:bold;margin-right:15px;'>Approve Deletion</a>
+                                        <a href='{$disapproveLink}' style='display:inline-block;padding:12px 24px;background:#ef4444;color:#fff;text-decoration:none;border-radius:5px;font-weight:bold;'>Disapprove</a>
+                                    </div>
+                                    <p style='font-size: 13px; color: #666;'>The project will only be permanently deleted once {$threshold} or more admins approve the request.</p>
+                                </div>
+                            ";
+                            sendSystemEmail($admin['email'], $subject, $bodyHTML);
+                        }
+
+                        header('Location: projects.php?ok=3');
+                        exit;
+                    }
+                }
             }
-            
-            header('Location: projects.php?ok=2');
-            exit;
         }
     }
 
@@ -144,6 +201,8 @@
                     <div class="tf-toast-inline">✅ Project created successfully.</div><?php endif; ?>
                 <?php if (isset($_GET['ok']) && $_GET['ok']==2): ?>
                     <div class="tf-toast-inline" style="background:rgba(239,68,68,0.1); color:#ef4444; border-color:rgba(239,68,68,0.2);">✅ Project and all associated records permanently erased.</div><?php endif; ?>
+                <?php if (isset($_GET['ok']) && $_GET['ok']==3): ?>
+                    <div class="tf-toast-inline">✅ Deletion request submitted and sent to admins for approval.</div><?php endif; ?>
                 <?php if (!empty($addErr)): ?>
                     <div class="tf-err">⚠️ <?= e($addErr) ?></div><?php endif; ?>
 
@@ -161,7 +220,7 @@
                             </div>
                             <div class="tf-pc-foot">
                                 <a href="tasks.php?project=<?= $p['id'] ?>" class="tf-pc-link">View Tasks →</a>
-                                <a href="javascript:void(0)" onclick="confirmDelete('Are you sure you want to permanently delete this project? All associated tasks and sprints will be completely erased.', () => window.location.href='projects.php?del=<?= $p['id'] ?>')" class="tf-pc-link" style="color:#ef4444; margin-left:auto;">Delete</a>
+                                <a href="javascript:void(0)" onclick="openDeleteModal('<?= $p['id'] ?>', '<?= addslashes(e($p['name'])) ?>')" class="tf-pc-link" style="color:#ef4444; margin-left:auto;">Delete</a>
                             </div>
                         </div>
                     <?php endforeach; ?>
@@ -209,6 +268,36 @@
             </form>
         </div>
     </div>
+
+    <div class="tf-overlay" id="deleteModal">
+        <div class="tf-modal">
+            <div class="tf-modal-hd">
+                <div class="tf-modal-title">Delete Project Request</div><button class="tf-modal-close" onclick="document.getElementById('deleteModal').classList.remove('open')">✕</button>
+            </div>
+            <form method="POST">
+                <input type="hidden" name="action" value="request_delete">
+                <input type="hidden" name="project_id" id="del_project_id" value="">
+                <div class="tf-modal-body">
+                    <p>You are requesting to permanently delete <strong id="del_project_name"></strong>.</p>
+                    <div class="tf-fg">
+                        <label class="tf-lbl">Reason for Deletion</label>
+                        <textarea name="reason" class="tf-inp" style="height:80px" required placeholder="Ex: Project was completed and superseded by ECA-v2..."></textarea>
+                    </div>
+                </div>
+                <div class="tf-modal-foot">
+                    <button type="button" class="btn btn-secondary" onclick="document.getElementById('deleteModal').classList.remove('open')">Cancel</button>
+                    <button type="submit" class="btn btn-primary" style="background:#ef4444; border-color:#ef4444;">Send Request</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <script>
+    function openDeleteModal(id, name) {
+        document.getElementById('del_project_id').value = id;
+        document.getElementById('del_project_name').innerText = name;
+        document.getElementById('deleteModal').classList.add('open');
+    }
+    </script>
 </body>
 
 </html>
