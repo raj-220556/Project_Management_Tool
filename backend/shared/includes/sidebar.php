@@ -19,6 +19,7 @@ $__nav = [
         ['icon' => '👥', 'label' => 'Users', 'page' => 'users', 'url' => APP_URL . '/frontend/admin/users.php'],
         ['icon' => '📁', 'label' => 'Projects', 'page' => 'projects', 'url' => APP_URL . '/frontend/admin/projects.php'],
         ['icon' => '🛡️', 'label' => 'Team Approvals', 'page' => 'removal_requests', 'url' => APP_URL . '/frontend/admin/removal_requests.php'],
+        ['icon' => '🗑️', 'label' => 'Delete Requests', 'page' => 'delete_requests', 'url' => APP_URL . '/frontend/admin/delete_requests.php'],
         ['icon' => '🐙', 'label' => 'Git Activity', 'page' => 'git_activity', 'url' => APP_URL . '/frontend/admin/git_activity.php'],
         ['icon' => '📊', 'label' => 'Analytics', 'page' => 'analytics', 'url' => APP_URL . '/frontend/admin/analytics.php'],
         ['icon' => '📜', 'label' => 'Activity', 'page' => 'activity', 'url' => APP_URL . '/frontend/admin/activity.php'],

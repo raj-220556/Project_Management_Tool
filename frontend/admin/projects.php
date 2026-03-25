@@ -167,7 +167,13 @@
     }
 
     $orgId = currentUser()['org_id'];
-    $projectsQ = $db->prepare("SELECT p.*, u.name mname, (SELECT COUNT(*) FROM tf_tasks WHERE project_id=p.id) tc FROM tf_projects p LEFT JOIN tf_users u ON p.manager_id=u.id WHERE p.org_id=? ORDER BY p.created_at DESC");
+    $projectsQ = $db->prepare("SELECT p.*, u.name mname, 
+        (SELECT COUNT(*) FROM tf_tasks WHERE project_id=p.id) tc,
+        (SELECT id FROM tf_project_deletion_requests WHERE project_id=p.id AND status='pending' LIMIT 1) pending_del_id
+        FROM tf_projects p 
+        LEFT JOIN tf_users u ON p.manager_id=u.id 
+        WHERE p.org_id=? 
+        ORDER BY p.created_at DESC");
     $projectsQ->execute([$orgId]);
     $projects = $projectsQ->fetchAll();
 
@@ -208,8 +214,11 @@
 
                 <div class="tf-grid-projects a2">
                     <?php foreach ($projects as $p): ?>
-                        <div class="tf-project-card" style="border-top: 4px solid <?= e($p['color']) ?>">
-                            <div class="tf-pc-body">
+                        <div class="tf-project-card" style="border-top: 4px solid <?= e($p['color']) ?>; position:relative;">
+                            <?php if ($p['pending_del_id']): ?>
+                                <div style="position:absolute; top:12px; right:12px; background:#ef4444; color:#fff; font-size:10px; padding:2px 8px; border-radius:10px; font-weight:700; z-index:2; box-shadow:0 2px 4px rgba(239,68,68,0.3);">DELETION PENDING</div>
+                            <?php endif; ?>
+                            <div class="tf-pc-body" style="<?= $p['pending_del_id'] ? 'opacity:0.6;' : '' ?>">
                                 <div class="tf-pc-code"><?= e($p['code']) ?></div>
                                 <h3 class="tf-pc-title"><?= e($p['name']) ?></h3>
                                 <p class="tf-pc-desc"><?= e($p['description'] ?: 'No description provided.') ?></p>
@@ -220,7 +229,11 @@
                             </div>
                             <div class="tf-pc-foot">
                                 <a href="tasks.php?project=<?= $p['id'] ?>" class="tf-pc-link">View Tasks →</a>
-                                <a href="javascript:void(0)" onclick="openDeleteModal('<?= $p['id'] ?>', '<?= addslashes(e($p['name'])) ?>')" class="tf-pc-link" style="color:#ef4444; margin-left:auto;">Delete</a>
+                                <?php if ($p['pending_del_id']): ?>
+                                    <span class="tf-pc-link" style="color:var(--text3); margin-left:auto; cursor:help;" title="A deletion request is currently being reviewed by admins.">Pending Delete</span>
+                                <?php else: ?>
+                                    <a href="javascript:void(0)" onclick="openDeleteModal('<?= $p['id'] ?>', '<?= addslashes(e($p['name'])) ?>')" class="tf-pc-link" style="color:#ef4444; margin-left:auto;">Delete</a>
+                                <?php endif; ?>
                             </div>
                         </div>
                     <?php endforeach; ?>
