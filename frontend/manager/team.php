@@ -66,12 +66,62 @@
         $mid = (int)$_GET['remove_member'];
         $pid = (int)$_GET['project_id'];
         
-        $chk = $db->prepare("SELECT id FROM tf_projects WHERE id=? AND manager_id=?");
+        $chk = $db->prepare("SELECT name FROM tf_projects WHERE id=? AND manager_id=?");
         $chk->execute([$pid, $uid]);
-        if ($chk->fetch()) {
-            $db->prepare("DELETE FROM tf_project_members WHERE project_id=? AND user_id=?")->execute([$pid, $mid]);
-            logActivity($uid, $pid, null, 'removed member from project', 'project', $mid);
-            header("Location: team.php?project_id=$pid&ok=2"); exit;
+        $proj = $chk->fetch();
+        if ($proj) {
+            $projName = $proj['name'];
+            $reqChk = $db->prepare("SELECT id FROM tf_member_removal_requests WHERE project_id=? AND user_id=? AND status='pending'");
+            $reqChk->execute([$pid, $mid]);
+            if (!$reqChk->fetch()) {
+                $db->prepare("INSERT INTO tf_member_removal_requests (project_id, user_id, manager_id, status) VALUES (?, ?, ?, 'pending')")->execute([$pid, $mid, $uid]);
+                
+                $memStmt = $db->prepare("SELECT name, email FROM tf_users WHERE id = ?");
+                $memStmt->execute([$mid]);
+                $mem = $memStmt->fetch();
+
+                $admins = $db->query("SELECT id, name, email FROM tf_users WHERE role='admin' AND is_active=1")->fetchAll();
+                $mgrName = currentUser()['name'];
+                $mgrEmail = currentUser()['email'];
+                
+                if ($mem) {
+                    $subject = "Removal Request from Project: " . $projName;
+                    $bodyHTML = "
+                        <div style='font-family: Arial, sans-serif; color: #333; line-height: 1.6;'>
+                            <h2 style='color: #ef4444;'>Project Team Update</h2>
+                            <p>Hello <strong>" . htmlspecialchars($mem['name']) . "</strong>,</p>
+                            <p>Your manager <strong>" . htmlspecialchars($mgrName) . "</strong> has requested to remove you from the project <strong>" . htmlspecialchars($projName) . "</strong>. This request is currently pending admin approval.</p>
+                            <p>You will be notified once the admin makes a decision.</p>
+                            <hr style='border: none; border-top: 1px solid #eaeaea; margin: 20px 0;'>
+                            <p style='font-size: 12px; color: #777;'>Regards,<br>SprintDesk Team</p>
+                        </div>
+                    ";
+                    sendSystemEmail($mem['email'], $subject, $bodyHTML);
+                    notifyUser($mid, "Removal Request", "Manager $mgrName requested to remove you from project $projName.", 'system');
+                }
+
+                foreach ($admins as $ad) {
+                    $subject = "Action Required: Member Removal Request for " . $projName;
+                    $bodyHTML = "
+                        <div style='font-family: Arial, sans-serif; color: #333; line-height: 1.6;'>
+                            <h2 style='color: #ef4444;'>Member Removal Request</h2>
+                            <p>Hello <strong>" . htmlspecialchars($ad['name']) . "</strong>,</p>
+                            <p>Manager <strong>" . htmlspecialchars($mgrName) . "</strong> (" . htmlspecialchars($mgrEmail) . ") has requested to remove developer <strong>" . htmlspecialchars($mem['name'] ?? 'Unknown Member') . "</strong> from project <strong>" . htmlspecialchars($projName) . "</strong>.</p>
+                            <p>Please review and approve or reject this request from your dashboard.</p>
+                            <p><a href='" . APP_URL . "/frontend/admin/removal_requests.php' style='display:inline-block;padding:10px 20px;background:#ef4444;color:#fff;text-decoration:none;border-radius:5px;'>View Requests</a></p>
+                            <hr style='border: none; border-top: 1px solid #eaeaea; margin: 20px 0;'>
+                            <p style='font-size: 12px; color: #777;'>Regards,<br>SprintDesk Team</p>
+                        </div>
+                    ";
+                    sendSystemEmail($ad['email'], $subject, $bodyHTML);
+                    notifyUser($ad['id'], "Removal Request Pending", "Manager $mgrName wants to remove {$mem['name']} from $projName.", 'system');
+                }
+
+                logActivity($uid, $pid, null, 'requested to remove member from project', 'project', $mid);
+                header("Location: team.php?project_id=$pid&ok=3"); exit;
+            } else {
+                header("Location: team.php?project_id=$pid&ok=4"); exit;
+            }
         }
     }
 
@@ -100,6 +150,8 @@
     if (isset($_GET['ok'])) {
         if ($_GET['ok'] == 1) $okMsg = "✅ Member added to project successfully.";
         if ($_GET['ok'] == 2) $okMsg = "✅ Member removed from project.";
+        if ($_GET['ok'] == 3) $okMsg = "✅ Removal requested. Waiting for Admin approval.";
+        if ($_GET['ok'] == 4) $okMsg = "⚠️ A removal request is already pending for this member.";
     }
     ?>
 </head>
@@ -150,7 +202,7 @@
                                 </div>
                                 <div style="display:flex; justify-content:center; gap:8px; align-items:center;">
                                     <span class="badge b-developer">Developer</span>
-                                    <a href="javascript:void(0)" onclick="if(confirm('Remove this developer from the project?')) window.location.href='team.php?project_id=<?= $selectedProject ?>&remove_member=<?= $m['id'] ?>'" style="color:#ef4444; font-size:12px; text-decoration:none; padding:4px 8px; border-radius:6px; background:rgba(239,68,68,0.1);">Remove</a>
+                                    <a href="javascript:void(0)" onclick="if(confirm('Request removal of this developer from the project?')) window.location.href='team.php?project_id=<?= $selectedProject ?>&remove_member=<?= $m['id'] ?>'" style="color:#ef4444; font-size:12px; text-decoration:none; padding:4px 8px; border-radius:6px; background:rgba(239,68,68,0.1);">Request Removal</a>
                                 </div>
                             </div>
                         <?php endforeach; ?>
