@@ -14,6 +14,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $org_name = trim($_POST['org_name'] ?? '');
     $email    = trim($_POST['email'] ?? '');
     $pass     = $_POST['pass'] ?? '';
+    $email_2  = trim($_POST['email_2'] ?? '');
+    $pass_2   = $_POST['pass_2'] ?? '';
+    $email_3  = trim($_POST['email_3'] ?? '');
+    $pass_3   = $_POST['pass_3'] ?? '';
     $address  = trim($_POST['address'] ?? '');
     $domain   = trim($_POST['domain'] ?? '');
 
@@ -33,8 +37,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $err = 'A registration request for this company or email is already pending.';
             } else {
                 $hashedPass = password_hash($pass, PASSWORD_DEFAULT);
-                $stmt = $db->prepare("INSERT INTO tf_org_requests (org_name, email, password, address, domain, status) VALUES (?, ?, ?, ?, ?, 'pending')");
-                if ($stmt->execute([$org_name, $email, $hashedPass, $address, $domain])) {
+                $hashedPass2 = $pass_2 ? password_hash($pass_2, PASSWORD_DEFAULT) : null;
+                $hashedPass3 = $pass_3 ? password_hash($pass_3, PASSWORD_DEFAULT) : null;
+
+                $stmt = $db->prepare("INSERT INTO tf_org_requests (org_name, email, password, email_2, password_2, email_3, password_3, address, domain, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')");
+                if ($stmt->execute([$org_name, $email, $hashedPass, $email_2 ?: null, $hashedPass2, $email_3 ?: null, $hashedPass3, $address, $domain])) {
                     $success = 'Your registration request has been submitted successfully! It is pending approval from the Organisation Manager.';
                     // Clear fields
                     $_POST = [];
@@ -50,6 +57,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 $savedOrg     = htmlspecialchars($_POST['org_name'] ?? '', ENT_QUOTES);
 $savedEmail   = htmlspecialchars($_POST['email'] ?? '', ENT_QUOTES);
+$savedEmail2  = htmlspecialchars($_POST['email_2'] ?? '', ENT_QUOTES);
+$savedEmail3  = htmlspecialchars($_POST['email_3'] ?? '', ENT_QUOTES);
 $savedAddress = htmlspecialchars($_POST['address'] ?? '', ENT_QUOTES);
 $savedDomain  = htmlspecialchars($_POST['domain'] ?? '', ENT_QUOTES);
 ?>
@@ -359,17 +368,47 @@ $savedDomain  = htmlspecialchars($_POST['domain'] ?? '', ENT_QUOTES);
                         </div>
                         
                         <div style="margin: 24px 0; height: 1px; background: var(--border);"></div>
-                        <p style="font-size:13px; color:var(--text3); margin-bottom:12px;"><strong>Admin Credentials</strong> (Used for first login after approval)</p>
-
                         <div class="tf-fg">
-                            <label class="tf-lbl">Admin Email *</label>
+                            <label class="tf-lbl">Primary Admin Email *</label>
                             <input type="email" name="email" class="tf-inp" placeholder="admin@acme.com" required value="<?= $savedEmail ?>">
                         </div>
                         <div class="tf-fg">
-                            <label class="tf-lbl">Admin Password *</label>
+                            <label class="tf-lbl">Primary Admin Password *</label>
                             <div class="pass-wrap">
                                 <input type="password" name="pass" id="passInp" class="tf-inp" placeholder="••••••••" required>
-                                <button type="button" class="eye-btn" id="eyeBtn">👁</button>
+                                <button type="button" class="eye-btn" data-target="passInp">👁</button>
+                            </div>
+                        </div>
+
+                        <div style="margin: 20px 0; padding: 15px; border: 1px dashed var(--border); border-radius: 12px; background: rgba(255,255,255,0.02);">
+                            <p style="font-size:12px; color:var(--text3); margin-bottom:12px; font-weight:600; text-transform:uppercase; letter-spacing:0.5px;">Secondary Admins (Optional)</p>
+                            
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                                <div class="tf-fg">
+                                    <label class="tf-lbl">Admin 2 Email</label>
+                                    <input type="email" name="email_2" class="tf-inp" placeholder="admin2@acme.com" value="<?= $savedEmail2 ?>">
+                                </div>
+                                <div class="tf-fg">
+                                    <label class="tf-lbl">Admin 2 Password</label>
+                                    <div class="pass-wrap">
+                                        <input type="password" name="pass_2" id="passInp2" class="tf-inp" placeholder="••••••••">
+                                        <button type="button" class="eye-btn" data-target="passInp2">👁</button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 10px;">
+                                <div class="tf-fg">
+                                    <label class="tf-lbl">Admin 3 Email</label>
+                                    <input type="email" name="email_3" class="tf-inp" placeholder="admin3@acme.com" value="<?= $savedEmail3 ?>">
+                                </div>
+                                <div class="tf-fg">
+                                    <label class="tf-lbl">Admin 3 Password</label>
+                                    <div class="pass-wrap">
+                                        <input type="password" name="pass_3" id="passInp3" class="tf-inp" placeholder="••••••••">
+                                        <button type="button" class="eye-btn" data-target="passInp3">👁</button>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                         <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;padding:12px;font-size:14px;margin-top:4px" id="submitBtn">
@@ -386,14 +425,16 @@ $savedDomain  = htmlspecialchars($_POST['domain'] ?? '', ENT_QUOTES);
         const t = localStorage.getItem('sd_theme') || 'light';
         document.documentElement.setAttribute('data-theme', t);
 
-        const eyeBtn = document.getElementById('eyeBtn');
-        if (eyeBtn) {
-            eyeBtn.addEventListener('click', () => {
-                const p = document.getElementById('passInp');
-                p.type = p.type === 'password' ? 'text' : 'password';
-                eyeBtn.textContent = p.type === 'password' ? '👁' : '🙈';
+        document.querySelectorAll('.eye-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const targetId = btn.getAttribute('data-target');
+                const p = document.getElementById(targetId);
+                if (p) {
+                    p.type = p.type === 'password' ? 'text' : 'password';
+                    btn.textContent = p.type === 'password' ? '👁' : '🙈';
+                }
             });
-        }
+        });
 
         const form = document.querySelector('form');
         if (form) {

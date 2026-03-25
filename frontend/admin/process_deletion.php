@@ -36,45 +36,49 @@ try {
     $statusEnum = $action === 'approve' ? 'approved' : 'disapproved';
     $db->prepare("UPDATE tf_project_deletion_approvals SET status=?, acted_at=NOW() WHERE id=?")->execute([$statusEnum, $approval['id']]);
 
-    $msg = "You have successfully {$statusEnum} the project deletion request.";
+    // Recalculate stats
+    $statsStmt = $db->prepare("SELECT status, COUNT(*) as c FROM tf_project_deletion_approvals WHERE request_id=? GROUP BY status");
+    $statsStmt->execute([$approval['request_id']]);
+    $stats = $statsStmt->fetchAll(PDO::FETCH_KEY_PAIR);
+    
+    $appCount = (int)($stats['approved'] ?? 0);
+    $disCount = (int)($stats['disapproved'] ?? 0);
+    
+    $totalStmt = $db->prepare("SELECT COUNT(*) FROM tf_project_deletion_approvals WHERE request_id=?");
+    $totalStmt->execute([$approval['request_id']]);
+    $totalAdmins = (int)$totalStmt->fetchColumn();
 
-    if ($action === 'approve') {
-        $appCountStmt = $db->prepare("SELECT COUNT(*) FROM tf_project_deletion_approvals WHERE request_id=? AND status='approved'");
-        $appCountStmt->execute([$approval['request_id']]);
-        $appCount = (int)$appCountStmt->fetchColumn();
+    $threshold = ceil($totalAdmins / 2);
+    if ($totalAdmins == 2) $threshold = 2;
 
-        $totalStmt = $db->prepare("SELECT COUNT(*) FROM tf_project_deletion_approvals WHERE request_id=?");
-        $totalStmt->execute([$approval['request_id']]);
-        $totalAdmins = (int)$totalStmt->fetchColumn();
+    if ($appCount >= $threshold) {
+        $did = $approval['project_id'];
+        $reqId = $approval['request_id'];
+        $pname = $approval['proj_name'];
+        $orgId = $approval['org_id'];
 
-        $threshold = ceil($totalAdmins / 2);
-        if ($totalAdmins == 2) $threshold = 2; // If 2 admins, both must approve
+        $db->prepare("UPDATE tf_project_deletion_requests SET status='completed' WHERE id=?")->execute([$reqId]);
 
-        if ($appCount >= $threshold) {
-            $did = $approval['project_id'];
-            $reqId = $approval['request_id'];
-            $pname = $approval['proj_name'];
-            $orgId = $approval['org_id'];
-
-            // We update status to completed just for the transaction state before deletion cascades
-            $db->prepare("UPDATE tf_project_deletion_requests SET status='completed' WHERE id=?")->execute([$reqId]);
-
-            $db->prepare('DELETE FROM tf_activity WHERE project_id=?')->execute([$did]);
-            $db->prepare('DELETE FROM tf_tasks WHERE project_id=?')->execute([$did]);
-            $db->prepare('DELETE FROM tf_sprints WHERE project_id=?')->execute([$did]);
-            // Project Deletion cascade will clear requests and approvals securely
-            $db->prepare('DELETE FROM tf_projects WHERE id=?')->execute([$did]);
-            
-            logActivity($approval['admin_id'], null, null, 'permanently deleted project following approvals', 'project', $did, '', $pname);
-            
-            $orgUsers = $db->prepare("SELECT id FROM tf_users WHERE org_id=?");
-            $orgUsers->execute([$orgId]);
-            foreach($orgUsers->fetchAll() as $u) {
-                notifyUser($u['id'], 'Project Deleted', "Project '$pname' was permanently purged after receiving admin approvals.", "projects.php");
-            }
-            
-            $msg .= " The required number of approvals was reached, and the project has been permanently deleted.";
+        $db->prepare('DELETE FROM tf_activity WHERE project_id=?')->execute([$did]);
+        $db->prepare('DELETE FROM tf_tasks WHERE project_id=?')->execute([$did]);
+        $db->prepare('DELETE FROM tf_sprints WHERE project_id=?')->execute([$did]);
+        $db->prepare('DELETE FROM tf_projects WHERE id=?')->execute([$did]);
+        
+        logActivity($approval['admin_id'], null, null, 'permanently deleted project following approvals', 'project', $did, '', $pname);
+        
+        $orgUsers = $db->prepare("SELECT id FROM tf_users WHERE org_id=?");
+        $orgUsers->execute([$orgId]);
+        foreach($orgUsers->fetchAll() as $u) {
+            notifyUser($u['id'], 'Project Deleted', "Project '$pname' was permanently purged after receiving admin approvals.", "projects.php");
         }
+        
+        $msg = "Project deletion approved by majority ($appCount/$totalAdmins) and project has been purged.";
+    } elseif ($disCount > ($totalAdmins - $threshold)) {
+        // Majority disapproval
+        $db->prepare("UPDATE tf_project_deletion_requests SET status='rejected' WHERE id=?")->execute([$approval['request_id']]);
+        $msg = "Project deletion request has been REJECTED by majority disapproval ($disCount/$totalAdmins).";
+    } else {
+        $msg = "You have successfully {$statusEnum} the request. Currently: {$appCount} Approved, {$disCount} Disapproved (out of {$totalAdmins} total admins).";
     }
 
     $db->commit();

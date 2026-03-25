@@ -51,9 +51,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'appro
             $insOrg->execute([$req['org_name'], $req['address'], $req['domain'], $org_key]);
             $oid = $db->lastInsertId();
             
-            // Insert Admin User
+            // Insert Admin Users
             $insUser = $db->prepare("INSERT INTO tf_users (name, email, password, role, org_id) VALUES (?, ?, ?, 'admin', ?)");
+            
+            // Primary Admin
             $insUser->execute([$req['org_name'] . ' Admin', $req['email'], $req['password'], $oid]);
+
+            // Secondary Admin
+            if (!empty($req['email_2']) && !empty($req['password_2'])) {
+                $insUser->execute([$req['org_name'] . ' Admin 2', $req['email_2'], $req['password_2'], $oid]);
+            }
+
+            // Tertiary Admin
+            if (!empty($req['email_3']) && !empty($req['password_3'])) {
+                $insUser->execute([$req['org_name'] . ' Admin 3', $req['email_3'], $req['password_3'], $oid]);
+            }
             
             // Update Request Status
             $db->prepare("UPDATE tf_org_requests SET status = 'approved' WHERE id = ?")->execute([$req_id]);
@@ -93,15 +105,46 @@ if (isset($_GET['del'])) {
     $id = (int)$_GET['del'];
     $count = $db->query("SELECT COUNT(*) FROM tf_organizations")->fetchColumn();
     if ($count > 1) {
-        $db->prepare("DELETE FROM tf_tasks WHERE project_id IN (SELECT id FROM tf_projects WHERE org_id = ?)")->execute([$id]);
-        $db->prepare("DELETE FROM tf_sprints WHERE project_id IN (SELECT id FROM tf_projects WHERE org_id = ?)")->execute([$id]);
-        $db->prepare("DELETE FROM tf_projects WHERE org_id = ?")->execute([$id]);
-        $db->prepare("DELETE FROM tf_notifications WHERE user_id IN (SELECT id FROM tf_users WHERE org_id = ?)")->execute([$id]);
-        $db->prepare("DELETE FROM tf_activity WHERE user_id IN (SELECT id FROM tf_users WHERE org_id = ?)")->execute([$id]);
-        $db->prepare("DELETE FROM tf_users WHERE org_id = ?")->execute([$id]);
-        $db->prepare("DELETE FROM tf_organizations WHERE id = ?")->execute([$id]);
-        logActivity(currentUser()['id'], null, null, 'purged organization', 'organization', $id);
-        header("Location: organizations.php?ok=2"); exit;
+        $db->beginTransaction();
+        try {
+            // Get org name for requests cleanup
+            $stmt = $db->prepare("SELECT name FROM tf_organizations WHERE id = ?");
+            $stmt->execute([$id]);
+            $oname = $stmt->fetchColumn();
+
+            // 1. Delete Task Related
+            $db->prepare("DELETE FROM tf_comments WHERE task_id IN (SELECT id FROM tf_tasks WHERE project_id IN (SELECT id FROM tf_projects WHERE org_id = ?))")->execute([$id]);
+            $db->prepare("DELETE FROM tf_tasks WHERE project_id IN (SELECT id FROM tf_projects WHERE org_id = ?)")->execute([$id]);
+            
+            // 2. Delete Project Related
+            $db->prepare("DELETE FROM tf_sprints WHERE project_id IN (SELECT id FROM tf_projects WHERE org_id = ?)")->execute([$id]);
+            $db->prepare("DELETE FROM tf_github_branches WHERE project_id IN (SELECT id FROM tf_projects WHERE org_id = ?)")->execute([$id]);
+            $db->prepare("DELETE FROM tf_github_commits WHERE project_id IN (SELECT id FROM tf_projects WHERE org_id = ?)")->execute([$id]);
+            $db->prepare("DELETE FROM tf_github_prs WHERE project_id IN (SELECT id FROM tf_projects WHERE org_id = ?)")->execute([$id]);
+            $db->prepare("DELETE FROM tf_member_removal_requests WHERE project_id IN (SELECT id FROM tf_projects WHERE org_id = ?)")->execute([$id]);
+            $db->prepare("DELETE FROM tf_project_deletion_approvals WHERE request_id IN (SELECT id FROM tf_project_deletion_requests WHERE project_id IN (SELECT id FROM tf_projects WHERE org_id = ?))")->execute([$id]);
+            $db->prepare("DELETE FROM tf_project_deletion_requests WHERE project_id IN (SELECT id FROM tf_projects WHERE org_id = ?)")->execute([$id]);
+            $db->prepare("DELETE FROM tf_project_members WHERE project_id IN (SELECT id FROM tf_projects WHERE org_id = ?)")->execute([$id]);
+            $db->prepare("DELETE FROM tf_projects WHERE org_id = ?")->execute([$id]);
+            
+            // 3. Delete User Related
+            $db->prepare("DELETE FROM tf_notifications WHERE user_id IN (SELECT id FROM tf_users WHERE org_id = ?)")->execute([$id]);
+            $db->prepare("DELETE FROM tf_activity WHERE user_id IN (SELECT id FROM tf_users WHERE org_id = ?)")->execute([$id]);
+            $db->prepare("DELETE FROM tf_users WHERE org_id = ?")->execute([$id]);
+            
+            // 4. Delete Organization & Requests
+            if ($oname) {
+                $db->prepare("DELETE FROM tf_org_requests WHERE org_name = ?")->execute([$oname]);
+            }
+            $db->prepare("DELETE FROM tf_organizations WHERE id = ?")->execute([$id]);
+
+            $db->commit();
+            logActivity(currentUser()['id'], null, null, 'purged organization', 'organization', $id);
+            header("Location: organizations.php?ok=2"); exit;
+        } catch (Exception $e) {
+            $db->rollBack();
+            $msg = "Purge failed: " . $e->getMessage();
+        }
     } else {
         $msg = "Cannot delete the only organization.";
     }
